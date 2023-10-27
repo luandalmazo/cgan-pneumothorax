@@ -23,7 +23,6 @@ threshold = 0.5
 # metric = BinaryAccuracy(threshold=threshold)
 metric = BinaryAccuracy().to(device)
 
-
 model.eval()
 with torch.no_grad():
     mean_loss = 0
@@ -32,17 +31,11 @@ with torch.no_grad():
         image = image.to(device)
         label = label.to(device)
         output = model(image)
-
         output = output.squeeze(1).float()
         output = sigma(output)
         
         label = label.float()
-        print(output)
-        print(label)
-        
         metric(output, label)
 
-
 acc = metric.compute()
-
 print(f"Model accuracy for threshold={threshold} is {acc}")

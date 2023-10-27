@@ -7,6 +7,9 @@ from torch.optim.adam import Adam
 import argparse
 import sys
 from torch.nn import BCELoss
+from torchmetrics.classification import BinaryAccuracy
+
+
 
 dataset = PneumoDataset()
 train, validation = random_split(dataset, [0.8, 0.2])
@@ -37,7 +40,10 @@ sigma = torch.nn.Sigmoid().to(device)
 
 resnet = resnet.to(device)
 
+metric = BinaryAccuracy().to(device)
+
 for epoch in range(epochs):
+    print(f"Epoch {epoch};")
     mean_loss = 0
     resnet.train()
     for _, pair in enumerate(train_loader):
@@ -65,9 +71,13 @@ for epoch in range(epochs):
         optimizer.step()
         
 
-    resnet.eval()
     mean_loss = mean_loss/len(train_loader)
-    print(f'Epoch: {epoch}, Train Loss: {mean_loss}')
+    print(f'\tTrain Loss: {mean_loss}')
+
+    resnet.eval()
+
+    metric.reset()
+    # print("AFTER RESET", metric.compute())
 
     with torch.no_grad():
         mean_loss = 0
@@ -79,14 +89,13 @@ for epoch in range(epochs):
 
             output = output.squeeze(1).float()
             output = sigma(output)
-            
             label = label.float()
 
-            loss = criterion(output, label)
-            mean_loss += loss.item()
+            metric(output, label)
 
-    mean_loss = mean_loss/len(validation_loader)
-    print(f'Epoch: {epoch}, Validation Loss: {mean_loss}')
+    # mean_loss = mean_loss/len(validation_loader)
+    acc = metric.compute()
+    print(f'\tValidation Accuracy is: {acc}')
 
 
-torch.save(resnet, './trained_resnet-sigma.pkl')
+torch.save(resnet, './trained_resnet-sigma-accuracy.pkl')
