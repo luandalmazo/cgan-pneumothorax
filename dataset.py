@@ -4,10 +4,17 @@ import os
 import pydicom
 from torchvision import transforms
 
+# transform = transforms.Compose([
+#     transforms.ToTensor(),
+#     transforms.Resize(256, antialias=False),
+#     # transforms.Normalize((0.5,), (0.5,)),
+# ])
+
 transform = transforms.Compose([
     transforms.ToTensor(),
-    transforms.Resize(256, antialias=False),
-    # transforms.Normalize((0.5,), (0.5,)),
+    transforms.Resize(256, interpolation=transforms.InterpolationMode.BILINEAR,antialias=False),
+    transforms.CenterCrop(224),
+    transforms.Normalize(mean=[0.5], std=[0.5])
 ])
 
 class PneumoDataset(Dataset):
