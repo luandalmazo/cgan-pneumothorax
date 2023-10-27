@@ -49,7 +49,7 @@ for epoch in range(epochs):
         output = resnet(image)
 
         output = output.squeeze(1).float()
-        print(output)
+        # print(output)
         output = softmax(output)
         
         label = label.float()
