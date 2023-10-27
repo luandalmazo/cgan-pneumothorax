@@ -1,18 +1,19 @@
 import torch
 from torch.utils.data import random_split
 from dataset import PneumoDataset
-from torchvision.models import resnet18
 from torch.utils.data import DataLoader
 from torch.optim.adam import Adam
 import argparse
 import sys
 from torch.nn import BCELoss
 from torchmetrics.classification import BinaryAccuracy
-
+from datetime import datetime
+from pneumodel import PneuModel
 
 
 dataset = PneumoDataset()
-train, validation = random_split(dataset, [0.8, 0.2])
+rng = torch.Generator().manual_seed(42)
+train, validation = random_split(dataset, [0.8, 0.2], rng)
 
 parser = argparse.ArgumentParser(description='Pneumothorax Detection')
 parser.add_argument('--epochs', default=50, type=int)
@@ -22,24 +23,18 @@ args = parser.parse_args()
 
 epochs, lr, batch_size = args.epochs, args.lr, args.batch_size
 
-train_loader = DataLoader(train, batch_size=batch_size, shuffle=True)
-validation_loader = DataLoader(validation, batch_size=batch_size, shuffle=True)
+train_loader = DataLoader(train, batch_size=batch_size, shuffle=True, generator=rng)
+validation_loader = DataLoader(validation, batch_size=batch_size, shuffle=True, generator=rng)
 
-### HANDCRAFTED 
-resnet = resnet18(weights = "IMAGENET1K_V1")
-resnet.conv1 = torch.nn.Conv2d(1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
-resnet.fc = torch.nn.Linear(in_features=512, out_features=1, bias=True)
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-criterion = BCELoss().to(device)
-optimizer = Adam(resnet.parameters(), lr=lr)
-
-# softmax = torch.nn.Softmax().to(device)
-sigma = torch.nn.Sigmoid().to(device)
-
+resnet = PneuModel()
 resnet = resnet.to(device)
 
+criterion = BCELoss().to(device)
+optimizer = Adam(resnet.parameters(), lr=lr)
 metric = BinaryAccuracy().to(device)
 
 for epoch in range(epochs):
@@ -56,14 +51,7 @@ for epoch in range(epochs):
         output = resnet(image)
 
         output = output.squeeze(1).float()
-        # print(output)
-        output = sigma(output)
-        
         label = label.float()
-        # print(output)
-        # sys.stdin.flush()
-        # print("OUTSHAPE", output.shape)
-        # print("LABSHAPE", label.shape)
 
         loss = criterion(output, label)
         mean_loss += loss.item()
@@ -88,7 +76,6 @@ for epoch in range(epochs):
             output = resnet(image)
 
             output = output.squeeze(1).float()
-            output = sigma(output)
             label = label.float()
 
             metric(output, label)
@@ -98,4 +85,4 @@ for epoch in range(epochs):
     print(f'\tValidation Accuracy is: {acc}')
 
 
-torch.save(resnet, './trained_resnet-sigma-accuracy.pkl')
+torch.save(resnet, f'./resnet-sigma-{datetime.now()}.pkl')
