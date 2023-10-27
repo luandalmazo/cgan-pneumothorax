@@ -5,8 +5,8 @@ import pydicom
 from torchvision import transforms
 
 transform = transforms.Compose([
-    transforms.Resize(256),
     transforms.ToTensor(),
+    transforms.Resize(256),
     # transforms.Normalize((0.5,), (0.5,)),
 ])
 
@@ -17,8 +17,8 @@ class PneumoDataset(Dataset):
         self.list_no_pneumothorax = sorted(os.listdir(self.dir_no_pneumothorax))
         self.list_pneumothorax = sorted(os.listdir(self.dir_pneumothorax))
 
-        self.list_no_pneumothorax = [(0, file) for file in self.list_no_pneumothorax]
-        self.list_pneumothorax = [(1, file) for file in self.list_pneumothorax]
+        self.list_no_pneumothorax = [(0, os.path.join(self.dir_no_pneumothorax, file)) for file in self.list_no_pneumothorax]
+        self.list_pneumothorax = [(1, os.path.join(self.dir_pneumothorax, file)) for file in self.list_pneumothorax]
             
         self.dataset = self.list_no_pneumothorax+self.list_pneumothorax
 
@@ -31,6 +31,6 @@ class PneumoDataset(Dataset):
         image = pydicom.dcmread(dicom_file)
         image_pixel_data = image.pixel_array
         image_pixel_data = transform(image_pixel_data)
-        return image_pixel_data, label
+        return image_pixel_data, float(label)
 
 
