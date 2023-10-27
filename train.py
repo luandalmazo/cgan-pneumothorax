@@ -80,7 +80,6 @@ for epoch in range(epochs):
 
             metric(output, label)
 
-    # mean_loss = mean_loss/len(validation_loader)
     acc = metric.compute()
     print(f'\tValidation Accuracy is: {acc}')
 
