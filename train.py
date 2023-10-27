@@ -32,7 +32,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 criterion = BCELoss().to(device)
 optimizer = Adam(resnet.parameters(), lr=lr)
 
-softmax = torch.nn.Softmax().to(device)
+# softmax = torch.nn.Softmax().to(device)
+sigma = torch.nn.Sigmoid().to(device)
 
 resnet = resnet.to(device)
 
@@ -50,7 +51,7 @@ for epoch in range(epochs):
 
         output = output.squeeze(1).float()
         # print(output)
-        output = softmax(output)
+        output = sigma(output)
         
         label = label.float()
         # print(output)
@@ -77,7 +78,7 @@ for epoch in range(epochs):
             output = resnet(image)
 
             output = output.squeeze(1).float()
-            output = softmax(output)
+            output = sigma(output)
             
             label = label.float()
 
@@ -88,4 +89,4 @@ for epoch in range(epochs):
     print(f'Epoch: {epoch}, Validation Loss: {mean_loss}')
 
 
-torch.save(resnet, './trained_resnet.pkl')
+torch.save(resnet, './trained_resnet-sigma.pkl')
