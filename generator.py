@@ -6,6 +6,7 @@ from torchvision.datasets import MNIST
 from torchvision.utils import make_grid
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
+from utils import show_tensor_images
 
 class UpConvBlock(nn.Module):
     '''
@@ -45,35 +46,32 @@ class Generator(nn.Module):
               (MNIST is black-and-white, so 1 channel is your default)
         hidden_dim: the inner dimension, a scalar
     '''
-    def __init__(self, input_dim=100, im_chan=1, hidden_dim=64):
+    def __init__(self, input_dim=100, num_classes=2, im_chan=1, hidden_dim=64):
         super(Generator, self).__init__()
         self.input_dim = input_dim
-        # Build the neural network
-        # self.gen = nn.Sequential(
-        #     UpConvBlock(input_dim, hidden_dim * 4),
-        #     UpConvBlock(hidden_dim * 4, hidden_dim * 2, final_layer=True, batch_norm=False),
-        #     UpConvBlock(hidden_dim * 2, hidden_dim, batch_norm=False),
-        #     UpConvBlock(hidden_dim, im_chan, final_layer=True, batch_norm=False),
-        # )
-        # self.gen = nn.Sequential(
+        self.num_classes = num_classes
+
         self.up0 = nn.Upsample(scale_factor=4, mode="nearest")
-        
-        self.up1 = UpConvBlock(input_dim, hidden_dim * 16)
+        self.up1 = UpConvBlock(self.input_dim + self.num_classes, hidden_dim * 16)
         self.up2 = UpConvBlock(hidden_dim * 16, hidden_dim * 8)
         self.up3 = UpConvBlock(hidden_dim * 8, hidden_dim * 4)
         self.up4 = UpConvBlock(hidden_dim * 4, hidden_dim * 2)
         self.up5 = UpConvBlock(hidden_dim * 2, hidden_dim)
         self.up6 = UpConvBlock(hidden_dim, im_chan, final_layer=True)
-        # )
 
-    def forward(self, noise):
+    def forward(self, noise, target_class):
         '''
         Function for completing a forward pass of the generator: Given a noise tensor, 
         returns generated images.
         Parameters:
             noise: a noise tensor with dimensions (n_samples, input_dim)
         '''
-        x = noise.view(len(noise), self.input_dim, 1, 1)
+        x = torch.concatenate((noise, target_class), dim=1)
+        print(x)
+        print(x.shape)
+        x = x.view(len(x), self.input_dim + self.num_classes, 1, 1)
+        print(x)
+        print("-----")
         print(x.shape)
         x = self.up0(x)        
         print(x.shape)
@@ -89,7 +87,6 @@ class Generator(nn.Module):
         print(x.shape)
         x = self.up6(x)
         print(x.shape)
-
 
         return x
 
@@ -107,5 +104,8 @@ def get_noise(n_samples, input_dim, device='cpu'):
 if __name__ == "__main__":
     z = get_noise(1, 100)
     gen = Generator(input_dim=100)
-    out = gen(z)
+    out = gen(z, torch.tensor([[0,1]]))
     print(out.shape)
+
+    show_tensor_images(out, show="save", name="NOISESAO")
+
