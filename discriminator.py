@@ -71,3 +71,4 @@ if __name__ == "__main__":
     print(inp.shape)
 
     out = gen(inp, torch.tensor([0,1]))
+    print(out.shape)
