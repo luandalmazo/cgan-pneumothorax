@@ -66,6 +66,8 @@ class Generator(nn.Module):
         Parameters:
             noise: a noise tensor with dimensions (n_samples, input_dim)
         '''
+
+        # torch.nn.functional.one_hot(labels, n_classes)
         x = torch.concatenate((noise, target_class), dim=1)
         print(x)
         print(x.shape)
