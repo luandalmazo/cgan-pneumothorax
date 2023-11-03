@@ -13,4 +13,4 @@ labels = torch.tensor((0, 1))
 
 fake_images = model(labels)
 
-utils.show_tensor_images(fake_images, show="plot")
+utils.show_tensor_images(fake_images, show="save", name="Hilutho")
