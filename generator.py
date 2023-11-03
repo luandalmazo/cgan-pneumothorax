@@ -117,12 +117,13 @@ class UpStyleBlock(nn.Module):
         if not final_layer:
             self.nonlinear =  nn.ReLU()  # ReLU activation
         else:
-            self.nonlinear =  nn.Tanh()  # Tanh activation
+            # self.nonlinear =  nn.Tanh()  # Tanh activation
+            self.nonlinear =  nn.Sigmoid()  # Sigma activation
 
     def forward(self, x, style):
         x = self.up(x)
         x = self.conv(x, style)
-        x = self.noise(x)
+        # x = self.noise(x)
         x = self.nonlinear(x)
         return x
 
@@ -135,7 +136,7 @@ class Generator(nn.Module):
               (MNIST is black-and-white, so 1 channel is your default)
         hidden_dim: the inner dimension, a scalar
     '''
-    def __init__(self, style_dim=512, num_classes=2, im_chan=1):
+    def __init__(self, style_dim=256, num_classes=2, im_chan=1):
         super(Generator, self).__init__()
         self.style_dim = style_dim
 
@@ -148,13 +149,12 @@ class Generator(nn.Module):
         self.input = ConditionalInput(self.style_dim, size=4, num_classes=self.num_classes)
 
         # self.up0 = nn.Upsample(scale_factor=4, mode="nearest")
-        self.up1 = UpStyleBlock(self.style_dim, 512)
-        # self.up2 = UpStyleBlock(512, 256)
-        self.up2 = UpStyleBlock(512, 256)
-        self.up3 = UpStyleBlock(256, 128)
-        self.up4 = UpStyleBlock(128, 64)
-        self.up5 = UpStyleBlock(64, 32)
-        self.up6 = UpStyleBlock(32, im_chan, final_layer=True)
+        self.up1 = UpStyleBlock(self.style_dim, 256, style_dim=style_dim)
+        self.up2 = UpStyleBlock(256, 128, style_dim=style_dim)
+        self.up3 = UpStyleBlock(128, 64, style_dim=style_dim)
+        self.up4 = UpStyleBlock(64, 32, style_dim=style_dim)
+        self.up5 = UpStyleBlock(32, 16, style_dim=style_dim)
+        self.up6 = UpStyleBlock(16, im_chan, final_layer=True, style_dim=style_dim)
 
     def forward(self, labels):
         '''

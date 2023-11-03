@@ -4,21 +4,24 @@ import os
 import pydicom
 from torchvision import transforms
 
-# transform = transforms.Compose([
-#     transforms.ToTensor(),
-#     transforms.Resize(256, antialias=False),
-#     # transforms.Normalize((0.5,), (0.5,)),
-# ])
 
-transform = transforms.Compose([
+augment_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Resize(256, interpolation=transforms.InterpolationMode.BILINEAR, antialias=False),
+    transforms.RandomHorizontalFlip(p=0.5),
+    transforms.RandomRotation(degrees=20),
+    transforms.ColorJitter(brightness=0.1),
+])
+
+default_transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Resize(256, interpolation=transforms.InterpolationMode.BILINEAR,antialias=False),
     # transforms.CenterCrop(224),
     # transforms.Normalize(mean=[0.5], std=[0.5])
 ])
-
 class PneumoDataset(Dataset):
-    def __init__(self):
+    def __init__(self, transform=default_transform):
+        self.transform = transform
         self.dir_no_pneumothorax= "./siim_small/train/No Pneumothorax/"
         self.dir_pneumothorax= "./siim_small/train/Pneumothorax/"
         self.list_no_pneumothorax = sorted(os.listdir(self.dir_no_pneumothorax))
@@ -37,7 +40,7 @@ class PneumoDataset(Dataset):
         label, dicom_file = self.dataset[index]
         image = pydicom.dcmread(dicom_file)
         image_pixel_data = image.pixel_array
-        image_pixel_data = transform(image_pixel_data)
+        image_pixel_data = self.transform(image_pixel_data)
         return image_pixel_data, float(label)
 
 

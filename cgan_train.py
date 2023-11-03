@@ -7,7 +7,7 @@ import torchvision
 import torch
 import argparse
 
-from dataset import PneumoDataset
+from dataset import PneumoDataset, augment_transform
 from discriminator import Discriminator
 from generator import Generator
 
@@ -28,7 +28,8 @@ args = parser.parse_args()
 epochs, glr, dlr = args.epochs, args.glr, args.dlr
 batch_size = args.batch_size
 
-dataloader = DataLoader(PneumoDataset(), batch_size=batch_size, shuffle=True)
+dataset = PneumoDataset(transform=augment_transform)
+dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 
 gen = Generator(num_classes=2)
