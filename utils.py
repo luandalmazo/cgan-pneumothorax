@@ -1,5 +1,6 @@
 from torchvision.utils import make_grid
 import matplotlib.pyplot as plt
+import torch.nn as nn
 
 
 def show_tensor_images(image_tensor, num_images=250, size=(1, 28, 28), nrow=5, show="plot", name=None):
@@ -18,3 +19,11 @@ def show_tensor_images(image_tensor, num_images=250, size=(1, 28, 28), nrow=5, s
     elif show == "save":
         plt.savefig(f"fig{name}.png")
     
+
+def weightsinit(m):
+    # if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
+    if isinstance(m, nn.Conv2d):
+        nn.init.normal(m.weight, 0.0, 0.02)
+    # if isinstance(m, nn.InstanceNorm2d):
+    #     nn.init.normal(m.weight, 0.0, 0.02)
+    #     nn.init.constant(m.bias, 0)

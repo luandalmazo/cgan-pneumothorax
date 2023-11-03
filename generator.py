@@ -59,7 +59,7 @@ class Generator(nn.Module):
         self.up5 = UpConvBlock(hidden_dim * 2, hidden_dim)
         self.up6 = UpConvBlock(hidden_dim, im_chan, final_layer=True)
 
-    def forward(self, noise, target_class):
+    def forward(self, noise, labels):
         '''
         Function for completing a forward pass of the generator: Given a noise tensor, 
         returns generated images.
@@ -67,8 +67,9 @@ class Generator(nn.Module):
             noise: a noise tensor with dimensions (n_samples, input_dim)
         '''
 
-        # torch.nn.functional.one_hot(labels, n_classes)
-        x = torch.concatenate((noise, target_class), dim=1)
+        one_hot_vector = torch.nn.functional.one_hot(labels, self.num_classes_classes)
+
+        x = torch.concatenate((noise, one_hot_vector), dim=1)
         print(x)
         print(x.shape)
         x = x.view(len(x), self.input_dim + self.num_classes, 1, 1)
@@ -106,7 +107,7 @@ def get_noise(n_samples, input_dim, device='cpu'):
 if __name__ == "__main__":
     z = get_noise(1, 100)
     gen = Generator(input_dim=100)
-    out = gen(z, torch.tensor([[0,1]]))
+    out = gen(z, 1)
     print(out.shape)
 
     show_tensor_images(out, show="save", name="NOISESAO")
