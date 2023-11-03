@@ -38,7 +38,7 @@ class ConditionalInput(nn.Module):
         images_onehot = onehot.repeat(1, 1, self.size, self.size) # transform onehot vectors into onehot matrices
 
         constant = self.learnable.repeat(batch_size, 1, 1, 1)
-        print("CONST", constant.shape)
+        # print("CONST", constant.shape)
 
         out = torch.concatenate((constant, images_onehot), dim=1)
 
@@ -140,14 +140,12 @@ class Generator(nn.Module):
         self.style_dim = style_dim
 
         # self.style_transform = nn.Linear(style_dim-num_classes, style_dim-num_classes)
-        self.style_transform = nn.Linear(style_dim, style_dim)
+        # self.style_transform = nn.Linear(style_dim, style_dim)
 
         self.num_classes = num_classes
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         
         self.input = ConditionalInput(self.style_dim, size=4, num_classes=self.num_classes)
-
-
 
         # self.up0 = nn.Upsample(scale_factor=4, mode="nearest")
         self.up1 = UpStyleBlock(self.style_dim, 512)
@@ -165,30 +163,31 @@ class Generator(nn.Module):
         Parameters:
             noise: a noise tensor with dimensions (n_samples, input_dim)
         '''
-        # noise = get_noise(len(labels), self.style_dim-2).to(self.device)
-        # noise = get_noise(1, self.style_dim-self.num_classes).to(self.device).squeeze(0)
-        noise = get_noise(1, self.style_dim).to(self.device).squeeze(0)
-
-        pre_style = self.style_transform(noise)
 
         # one_hot_vector = torch.nn.functional.one_hot(labels, self.num_classes)
         # style = torch.concatenate((pre_style, one_hot_vector), dim=1)
-        style = pre_style
+
+        # noise = get_noise(len(labels), self.style_dim-2).to(self.device)
+        # noise = get_noise(1, self.style_dim-self.num_classes).to(self.device).squeeze(0)
+        noise = get_noise(1, self.style_dim).to(self.device).squeeze(0)
+        # pre_style = self.style_transform(noise)
+        # style = pre_style
+        style = noise
        
         x = self.input(labels)
-        print(x.shape)
+        # print(x.shape)
         x = self.up1(x, style)
-        print(x.shape)
+        # print(x.shape)
         x = self.up2(x, style)
-        print(x.shape)
+        # print(x.shape)
         x = self.up3(x, style)
-        print(x.shape)
+        # print(x.shape)
         x = self.up4(x, style)
-        print(x.shape)
+        # print(x.shape)
         x = self.up5(x, style)
-        print(x.shape)
+        # print(x.shape)
         x = self.up6(x, style)
-        print(x.shape)
+        # print(x.shape)
         # x = self.up7(x, style)
         # print(x.shape)
 
@@ -208,7 +207,7 @@ def get_noise(n_samples, input_dim, device='cpu'):
 if __name__ == "__main__":
     gen = Generator().to("cuda:0")
     out = gen(torch.tensor([0]).to("cuda:0").long())
-    # print(out.shape)
+    print(out.shape)
 
     show_tensor_images(out, show="save", name="EXAMPLE")
 

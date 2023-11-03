@@ -20,8 +20,8 @@ import sys
 # MODEL ARGUMENTS
 parser = argparse.ArgumentParser(description='cgan for data augmentation')
 parser.add_argument('--epochs', default=10, type=int)
-parser.add_argument('--glr', default=1e-6, type=float)
-parser.add_argument('--dlr', default=1e-6, type=float)
+parser.add_argument('--glr', default=1e-5, type=float)
+parser.add_argument('--dlr', default=1e-5, type=float)
 parser.add_argument('--batch_size', default=16, type=int)
 args = parser.parse_args()
 
@@ -113,7 +113,9 @@ for epoch in range(epochs):
         mean_gen_loss += adversarial_loss.item()
         gen_opt.step()
 
-    show_tensor_grayscale(fake.detach(), show="save", name=f"samples/{epoch}")
+    to_show = torch.concatenate((fake.detach(), real), dim=0)
+    # to_show = real
+    show_tensor_grayscale(to_show, show="save", name=f"samples/{epoch}", nrow=len(real)//2)
     sys.stdout.flush()
 
 
