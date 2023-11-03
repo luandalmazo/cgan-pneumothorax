@@ -31,7 +31,8 @@ class UpConvBlock(nn.Module):
             self.pipeline = nn.Sequential(
                 nn.Upsample(scale_factor=2, mode='nearest'),  # Upsample
                 nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=1, bias=False, padding=1, padding_mode="reflect"),
-                nn.Sigmoid()  # Sigmoid activation for the final layer
+                # nn.Sigmoid()  # Sigmoid activation for the final layer
+                nn.Tanh()  # Sigmoid activation for the final layer
             )
 
     def forward(self, x):
@@ -77,6 +78,7 @@ class Generator(nn.Module):
         # print("ONEHOTVEC SHAPE", one_hot_vector.shape)
 
         x = torch.concatenate((noise, one_hot_vector), dim=1)
+        # print("NOISE + ONEHOT", x)
         # print(x)
         # print(x.shape)
         x = x.view(len(x), self.input_dim + self.num_classes, 1, 1)
@@ -114,7 +116,7 @@ def get_noise(n_samples, input_dim, device='cpu'):
 if __name__ == "__main__":
     z = get_noise(1, 100)
     gen = Generator(input_dim=100)
-    out = gen(z, 1)
+    out = gen(torch.tensor([0]).to("cuda:0").long())
     print(out.shape)
 
     show_tensor_images(out, show="save", name="NOISESAO")

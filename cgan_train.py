@@ -37,8 +37,8 @@ gen_opt = torch.optim.Adam(gen.parameters(), lr=glr)
 disc = Discriminator(num_classes=2)
 disc_opt = torch.optim.Adam(disc.parameters(), lr=dlr)
 
-gen.apply(weights_init)
-disc.apply(weights_init)
+# gen.apply(weights_init)
+# disc.apply(weights_init)
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -49,8 +49,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 gen.to(device)
 disc.to(device)
 
-# criterion = nn.MSELoss()
-criterion = nn.BCEWithLogitsLoss()
+criterion = nn.MSELoss()
+# criterion = nn.BCEWithLogitsLoss()
 
 
 for epoch in range(epochs):
