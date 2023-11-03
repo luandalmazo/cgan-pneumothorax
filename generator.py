@@ -49,11 +49,13 @@ class NoiseInjection(nn.Module):
 
 class ModulatedConv2d(nn.Module):
     """As in StyleGAN v2, weight modulation and demodulation applied to the weights of the convolution"""
-    def __init__(self, in_channels, out_channels, kernel_size, style_dim=256):
+    def __init__(self, in_channels, out_channels, kernel_size, stride, padding, style_dim=256):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
         self.style_dim = style_dim
         # Initialize weights and biases
         self.weight = nn.Parameter(torch.randn(out_channels, in_channels, kernel_size, kernel_size))
@@ -64,9 +66,22 @@ class ModulatedConv2d(nn.Module):
     def forward(self, x, style):
         # Style modulation
         style = self.style_mapping(style)
+
         style = style.view(-1, self.in_channels, 1, 1)
-        # Modulate weights
+        # print(self.weight)
+        print(self.weight.shape)
+        # print(style.shape)
         modulated_weight = self.weight * style
+
+        # from lucidrains
+        # Modulate weights
+        # w1 = style[:, None, :, None, None]
+        # w2 = self.weight[None, :, :, :, :]
+        # modulated_weight = w2 * (w1 + 1)
+
+        print(modulated_weight.shape)
+
+
         # Perform convolution
         out = nn.functional.conv2d(x, modulated_weight, bias=self.bias, padding=1)
 
@@ -85,7 +100,9 @@ class UpStyleBlock(nn.Module):
         self.style_dim = style_dim
 
         self.up = nn.Upsample(scale_factor=2, mode='bilinear')  # Upsample
-        self.conv = ModulatedConv2d(input_channels, output_channels, kernel_size, style_dim=self.style_dim)
+        self.conv = ModulatedConv2d(input_channels, output_channels, stride=stride,
+                                    kernel_size=kernel_size, style_dim=self.style_dim,
+                                    padding=1)
         self.noise = NoiseInjection()
         if not final_layer:
             self.nonlinear =  nn.ReLU()  # ReLU activation
@@ -135,7 +152,8 @@ class Generator(nn.Module):
         Parameters:
             noise: a noise tensor with dimensions (n_samples, input_dim)
         '''
-        noise = get_noise(len(labels), self.style_dim-2).to(self.device)
+        # noise = get_noise(len(labels), self.style_dim-2).to(self.device)
+        noise = get_noise(1, self.style_dim-2).to(self.device).squeeze(0)
 
         pre_style = self.style_transform(noise)
 
