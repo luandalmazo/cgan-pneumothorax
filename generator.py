@@ -2,41 +2,102 @@ import torch
 from torch import nn
 from tqdm.auto import tqdm
 from torchvision import transforms
-from torchvision.datasets import MNIST
-from torchvision.utils import make_grid
-from torch.utils.data import DataLoader
-import matplotlib.pyplot as plt
 from utils import show_tensor_images
 
-class UpConvBlock(nn.Module):
+# self.channels = {       
+# # 4: 512,
+# # 8: 512,
+# # 16: 512,
+# # 32: 512,
+# # 64: 256 * 2,
+# # 128: 128 * 2,
+# # 256: 64 * 2,
+# # 512: 32 * 2,
+# # 1024: 16 * 2,
+# 4: 512,
+# 8: 512,
+# 16: 256,
+# 32: 256,
+# 64: 128,
+# 128: 64,
+# 256: 32
+# }
+
+class ConstantInput(nn.Module):
+    """Constant Input param"""
+    def __init__(self, channel, size=4):
+        super().__init__()
+        self.input = nn.Parameter(torch.randn(1, channel, size, size))
+
+    def forward(self, input):
+        batch_size = len(input)
+        out = self.input.repeat(batch_size, 1, 1, 1)
+        return out
+
+class NoiseInjection(nn.Module):
+    """Inject random noise into X"""
+    def __init__(self):
+        super().__init__()
+        self.weight = nn.Parameter(torch.zeros(1))
+
+    def forward(self, x, noise=None):
+        if noise is None:
+            batch_size, _, height, width = x.shape
+            noise = x.new_empty(batch_size, 1, height, width).normal_()
+
+        return x + self.weight * noise
+
+class ModulatedConv2d(nn.Module):
+    """As in StyleGAN v2, weight modulation and demodulation applied to the weights of the convolution"""
+    def __init__(self, in_channels, out_channels, kernel_size, style_dim=256):
+        super().__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.style_dim = style_dim
+        # Initialize weights and biases
+        self.weight = nn.Parameter(torch.randn(out_channels, in_channels, kernel_size, kernel_size))
+        self.bias = nn.Parameter(torch.zeros(out_channels))
+        # Style modulation network
+        self.style_mapping = nn.Linear(style_dim, in_channels)
+        
+    def forward(self, x, style):
+        # Style modulation
+        style = self.style_mapping(style)
+        style = style.view(-1, self.in_channels, 1, 1)
+        # Modulate weights
+        modulated_weight = self.weight * style
+        # Perform convolution
+        out = nn.functional.conv2d(x, modulated_weight, bias=self.bias, padding=1)
+
+        # Demodulate
+        std = torch.std(out, dim=(2, 3), keepdim=True)
+        out = out / std
+
+        return out
+
+class UpStyleBlock(nn.Module):
     '''
     Block for upsample-then-convolution in the Generator.
-    Parameters:
-        input_channels: how many channels the input feature representation has
-        output_channels: how many channels the output feature representation should have
-        kernel_size: the size of each convolutional filter, equivalent to (kernel_size, kernel_size)
-        stride: the stride of the convolution
-        final_layer: a boolean, true if it is the final layer and false otherwise 
-                    (affects activation and batchnorm)
     '''
-    def __init__(self, input_channels, output_channels, kernel_size=4, stride=1, final_layer=False, batch_norm=True):
+    def __init__(self, input_channels, output_channels, kernel_size=3, stride=1, final_layer=False, style_dim=512):
         super().__init__()
-        if not final_layer:
-            self.pipeline = nn.Sequential(
-                nn.Upsample(scale_factor=2, mode='nearest'),  # Upsample
-                nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=1, bias=False, padding=1, padding_mode="reflect"),
-                nn.ReLU(inplace=True)  # ReLU activation
-            )
-        else:
-            self.pipeline = nn.Sequential(
-                nn.Upsample(scale_factor=2, mode='nearest'),  # Upsample
-                nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=1, bias=False, padding=1, padding_mode="reflect"),
-                # nn.Sigmoid()  # Sigmoid activation for the final layer
-                nn.Tanh()  # Sigmoid activation for the final layer
-            )
+        self.style_dim = style_dim
 
-    def forward(self, x):
-        return self.pipeline(x)
+        self.up = nn.Upsample(scale_factor=2, mode='bilinear')  # Upsample
+        self.conv = ModulatedConv2d(input_channels, output_channels, kernel_size, style_dim=self.style_dim)
+        self.noise = NoiseInjection()
+        if not final_layer:
+            self.nonlinear =  nn.ReLU()  # ReLU activation
+        else:
+            self.nonlinear =  nn.Tanh()  # Tanh activation
+
+    def forward(self, x, style):
+        x = self.up(x)
+        x = self.conv(x, style)
+        x = self.noise(x)
+        x = self.nonlinear(x)
+        return x
 
 class Generator(nn.Module):
     '''
@@ -47,21 +108,25 @@ class Generator(nn.Module):
               (MNIST is black-and-white, so 1 channel is your default)
         hidden_dim: the inner dimension, a scalar
     '''
-    def __init__(self, input_dim=398, num_classes=2, im_chan=1, hidden_dim=64):
+    def __init__(self, style_dim=512, num_classes=2, im_chan=1):
         super(Generator, self).__init__()
-        self.input_dim = input_dim
+        self.style_dim = style_dim
+
+        self.style_transform = nn.Linear(style_dim-num_classes, style_dim-num_classes)
+
         self.num_classes = num_classes
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        
+        self.input = ConstantInput(self.style_dim)
 
         # self.up0 = nn.Upsample(scale_factor=4, mode="nearest")
-        self.up1 = UpConvBlock((self.input_dim+self.num_classes)//4, hidden_dim * 8)
-        self.up2 = UpConvBlock(hidden_dim * 8, hidden_dim * 4)
-        self.up3 = UpConvBlock(hidden_dim * 4, hidden_dim * 4)
-        self.up4 = UpConvBlock(hidden_dim * 4, hidden_dim * 2)
-        self.up5 = UpConvBlock(hidden_dim * 2, hidden_dim * 2)
-        self.up6 = UpConvBlock(hidden_dim * 2, hidden_dim)
-        self.up7 = UpConvBlock(hidden_dim, im_chan, final_layer=True)
-
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.up1 = UpStyleBlock(self.style_dim, 512)
+        # self.up2 = UpStyleBlock(512, 256)
+        self.up2 = UpStyleBlock(512, 256)
+        self.up3 = UpStyleBlock(256, 128)
+        self.up4 = UpStyleBlock(128, 64)
+        self.up5 = UpStyleBlock(64, 32)
+        self.up6 = UpStyleBlock(32, im_chan, final_layer=True)
 
     def forward(self, labels):
         '''
@@ -70,32 +135,30 @@ class Generator(nn.Module):
         Parameters:
             noise: a noise tensor with dimensions (n_samples, input_dim)
         '''
-        noise = get_noise(len(labels), self.input_dim).to(self.device)
+        noise = get_noise(len(labels), self.style_dim-2).to(self.device)
 
-        # labels = labels.long()
+        pre_style = self.style_transform(noise)
 
         one_hot_vector = torch.nn.functional.one_hot(labels, self.num_classes)
-        x = torch.concatenate((noise, one_hot_vector), dim=1)
-        x = x.view(len(x), (self.input_dim+self.num_classes)//4, 2, 2)
-        print(x)
-        # print("-----")
+        style = torch.concatenate((pre_style, one_hot_vector), dim=1)
+       
+        x = self.input(labels)
         print(x.shape)
-        # x = self.up0(x)        
+
+        x = self.up1(x, style)
+        print(x.shape)
+        x = self.up2(x, style)
+        print(x.shape)
+        x = self.up3(x, style)
+        print(x.shape)
+        x = self.up4(x, style)
+        print(x.shape)
+        x = self.up5(x, style)
+        print(x.shape)
+        x = self.up6(x, style)
+        print(x.shape)
+        # x = self.up7(x, style)
         # print(x.shape)
-        x = self.up1(x)
-        print(x.shape)
-        x = self.up2(x)
-        print(x.shape)
-        x = self.up3(x)
-        print(x.shape)
-        x = self.up4(x)
-        print(x.shape)
-        x = self.up5(x)
-        print(x.shape)
-        x = self.up6(x)
-        print(x.shape)
-        x = self.up7(x)
-        print(x.shape)
 
         return x
 
@@ -115,5 +178,5 @@ if __name__ == "__main__":
     out = gen(torch.tensor([0]).to("cuda:0").long())
     print(out.shape)
 
-    show_tensor_images(out, show="save", name="NOISESAO")
+    show_tensor_images(out, show="save", name="EXAMPLE")
 
