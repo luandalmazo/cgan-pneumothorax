@@ -47,18 +47,19 @@ class Generator(nn.Module):
               (MNIST is black-and-white, so 1 channel is your default)
         hidden_dim: the inner dimension, a scalar
     '''
-    def __init__(self, input_dim=100, num_classes=2, im_chan=1, hidden_dim=64):
+    def __init__(self, input_dim=398, num_classes=2, im_chan=1, hidden_dim=64):
         super(Generator, self).__init__()
         self.input_dim = input_dim
         self.num_classes = num_classes
 
-        self.up0 = nn.Upsample(scale_factor=4, mode="nearest")
-        self.up1 = UpConvBlock(self.input_dim + self.num_classes, hidden_dim)
-        self.up2 = UpConvBlock(hidden_dim, hidden_dim * 2)
-        self.up3 = UpConvBlock(hidden_dim * 2, hidden_dim * 4)
+        # self.up0 = nn.Upsample(scale_factor=4, mode="nearest")
+        self.up1 = UpConvBlock((self.input_dim+self.num_classes)//4, hidden_dim * 8)
+        self.up2 = UpConvBlock(hidden_dim * 8, hidden_dim * 4)
+        self.up3 = UpConvBlock(hidden_dim * 4, hidden_dim * 4)
         self.up4 = UpConvBlock(hidden_dim * 4, hidden_dim * 2)
-        self.up5 = UpConvBlock(hidden_dim * 2, hidden_dim)
-        self.up6 = UpConvBlock(hidden_dim, im_chan, final_layer=True)
+        self.up5 = UpConvBlock(hidden_dim * 2, hidden_dim * 2)
+        self.up6 = UpConvBlock(hidden_dim * 2, hidden_dim)
+        self.up7 = UpConvBlock(hidden_dim, im_chan, final_layer=True)
 
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -74,31 +75,27 @@ class Generator(nn.Module):
         # labels = labels.long()
 
         one_hot_vector = torch.nn.functional.one_hot(labels, self.num_classes)
-        # print("ONEHOTVEC", one_hot_vector)
-        # print("ONEHOTVEC SHAPE", one_hot_vector.shape)
-
         x = torch.concatenate((noise, one_hot_vector), dim=1)
-        # print("NOISE + ONEHOT", x)
-        # print(x)
-        # print(x.shape)
-        x = x.view(len(x), self.input_dim + self.num_classes, 1, 1)
-        # print(x)
+        x = x.view(len(x), (self.input_dim+self.num_classes)//4, 2, 2)
+        print(x)
         # print("-----")
-        # print(x.shape)
-        x = self.up0(x)        
+        print(x.shape)
+        # x = self.up0(x)        
         # print(x.shape)
         x = self.up1(x)
-        # print(x.shape)
+        print(x.shape)
         x = self.up2(x)
-        # print(x.shape)
+        print(x.shape)
         x = self.up3(x)
-        # print(x.shape)
+        print(x.shape)
         x = self.up4(x)
-        # print(x.shape)
+        print(x.shape)
         x = self.up5(x)
-        # print(x.shape)
+        print(x.shape)
         x = self.up6(x)
-        # print(x.shape)
+        print(x.shape)
+        x = self.up7(x)
+        print(x.shape)
 
         return x
 
@@ -114,8 +111,7 @@ def get_noise(n_samples, input_dim, device='cpu'):
     return torch.randn(n_samples, input_dim, device=device)
 
 if __name__ == "__main__":
-    z = get_noise(1, 100)
-    gen = Generator(input_dim=100)
+    gen = Generator().to("cuda:0")
     out = gen(torch.tensor([0]).to("cuda:0").long())
     print(out.shape)
 
