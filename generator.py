@@ -23,15 +23,25 @@ from utils import show_tensor_images
 # 256: 32
 # }
 
-class ConstantInput(nn.Module):
+class ConditionalInput(nn.Module):
     """Constant Input param"""
-    def __init__(self, channel, size=4):
+    def __init__(self, channel, size=4, num_classes=2):
         super().__init__()
-        self.input = nn.Parameter(torch.randn(1, channel, size, size))
+        self.size = size
+        self.num_classes = num_classes
+        self.learnable = nn.Parameter(torch.randn(1, channel-num_classes, size, size))
 
-    def forward(self, input):
-        batch_size = len(input)
-        out = self.input.repeat(batch_size, 1, 1, 1)
+    def forward(self, labels):
+        batch_size = len(labels)
+        onehot = torch.nn.functional.one_hot(labels, self.num_classes)
+        onehot = onehot[:, :, None, None] # no idea what this does, but it works
+        images_onehot = onehot.repeat(1, 1, self.size, self.size) # transform onehot vectors into onehot matrices
+
+        constant = self.learnable.repeat(batch_size, 1, 1, 1)
+        print("CONST", constant.shape)
+
+        out = torch.concatenate((constant, images_onehot), dim=1)
+
         return out
 
 class NoiseInjection(nn.Module):
@@ -66,10 +76,10 @@ class ModulatedConv2d(nn.Module):
     def forward(self, x, style):
         # Style modulation
         style = self.style_mapping(style)
-
         style = style.view(-1, self.in_channels, 1, 1)
+
         # print(self.weight)
-        print(self.weight.shape)
+        # print(self.weight.shape)
         # print(style.shape)
         modulated_weight = self.weight * style
 
@@ -79,7 +89,7 @@ class ModulatedConv2d(nn.Module):
         # w2 = self.weight[None, :, :, :, :]
         # modulated_weight = w2 * (w1 + 1)
 
-        print(modulated_weight.shape)
+        # print(modulated_weight.shape)
 
 
         # Perform convolution
@@ -129,12 +139,15 @@ class Generator(nn.Module):
         super(Generator, self).__init__()
         self.style_dim = style_dim
 
-        self.style_transform = nn.Linear(style_dim-num_classes, style_dim-num_classes)
+        # self.style_transform = nn.Linear(style_dim-num_classes, style_dim-num_classes)
+        self.style_transform = nn.Linear(style_dim, style_dim)
 
         self.num_classes = num_classes
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         
-        self.input = ConstantInput(self.style_dim)
+        self.input = ConditionalInput(self.style_dim, size=4, num_classes=self.num_classes)
+
+
 
         # self.up0 = nn.Upsample(scale_factor=4, mode="nearest")
         self.up1 = UpStyleBlock(self.style_dim, 512)
@@ -153,16 +166,17 @@ class Generator(nn.Module):
             noise: a noise tensor with dimensions (n_samples, input_dim)
         '''
         # noise = get_noise(len(labels), self.style_dim-2).to(self.device)
-        noise = get_noise(1, self.style_dim-2).to(self.device).squeeze(0)
+        # noise = get_noise(1, self.style_dim-self.num_classes).to(self.device).squeeze(0)
+        noise = get_noise(1, self.style_dim).to(self.device).squeeze(0)
 
         pre_style = self.style_transform(noise)
 
-        one_hot_vector = torch.nn.functional.one_hot(labels, self.num_classes)
-        style = torch.concatenate((pre_style, one_hot_vector), dim=1)
+        # one_hot_vector = torch.nn.functional.one_hot(labels, self.num_classes)
+        # style = torch.concatenate((pre_style, one_hot_vector), dim=1)
+        style = pre_style
        
         x = self.input(labels)
         print(x.shape)
-
         x = self.up1(x, style)
         print(x.shape)
         x = self.up2(x, style)
@@ -194,7 +208,7 @@ def get_noise(n_samples, input_dim, device='cpu'):
 if __name__ == "__main__":
     gen = Generator().to("cuda:0")
     out = gen(torch.tensor([0]).to("cuda:0").long())
-    print(out.shape)
+    # print(out.shape)
 
     show_tensor_images(out, show="save", name="EXAMPLE")
 
