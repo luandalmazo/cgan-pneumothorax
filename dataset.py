@@ -13,7 +13,7 @@ from torchvision import transforms
 transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Resize(256, interpolation=transforms.InterpolationMode.BILINEAR,antialias=False),
-    transforms.CenterCrop(224),
+    # transforms.CenterCrop(224),
     transforms.Normalize(mean=[0.5], std=[0.5])
 ])
 

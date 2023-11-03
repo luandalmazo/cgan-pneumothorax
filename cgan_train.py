@@ -7,7 +7,7 @@ import torchvision
 import torch
 import argparse
 
-from dataset import PneumoDataset, transform, extract_non_overlapping_image_patches
+from dataset import PneumoDataset
 from discriminator import Discriminator
 from generator import Generator
 
@@ -21,7 +21,7 @@ import sys
 parser = argparse.ArgumentParser(description='cgan for data augmentation')
 parser.add_argument('--epochs', default=10, type=int)
 parser.add_argument('--glr', default=1e-4, type=float)
-parser.add_argument('--dlr', default=1e-4, type=float)
+parser.add_argument('--dlr', default=1e-6, type=float)
 parser.add_argument('--batch_size', default=16, type=int)
 args = parser.parse_args()
 
@@ -31,10 +31,10 @@ batch_size = args.batch_size
 dataloader = DataLoader(PneumoDataset(), batch_size=batch_size, shuffle=True)
 
 
-gen = Generator()
+gen = Generator(num_classes=2)
 gen_opt = torch.optim.Adam(gen.parameters(), lr=glr)
 
-disc = Discriminator()
+disc = Discriminator(num_classes=2)
 disc_opt = torch.optim.Adam(disc.parameters(), lr=dlr)
 
 gen.apply(weights_init)
@@ -44,8 +44,8 @@ disc.apply(weights_init)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-gen = nn.DataParallel(gen)
-disc = nn.DataParallel(disc)
+# gen = nn.DataParallel(gen)
+# disc = nn.DataParallel(disc)
 gen.to(device)
 disc.to(device)
 
@@ -60,15 +60,17 @@ for epoch in range(epochs):
 
     mean_disc_loss = .0
     mean_gen_loss = .0
-    patch_count = 0
+    image_count = 0
 
     for _, pair in enumerate(dataloader):
         
         real, label = pair
 
+        image_count += len(real)
+
         real = real.to(device)
-        label = label.to(device)
-        gen_fake = gen(real, label)
+        label = label.long().to(device)
+        gen_fake = gen(label)
         
         # print(real.shape)
         # print(label.shape)
@@ -89,7 +91,7 @@ for epoch in range(epochs):
 
         disc_loss = (disc_fake_loss + disc_real_loss) / 2
         disc_loss.backward()
-        print("\tdisc", disc_loss.item())
+        # print("\tdisc", disc_loss.item())
         mean_disc_loss += disc_loss.item()
         
         disc_opt.step()
@@ -114,8 +116,8 @@ for epoch in range(epochs):
     sys.stdout.flush()
 
 
-    # print("disc loss:", mean_disc_loss / patch_count)
-    print("adv loss:", mean_gen_loss / patch_count)
+    print("disc loss:", mean_disc_loss / image_count)
+    print("gen loss:", mean_gen_loss / image_count)
 
 
 time = str(datetime.now())

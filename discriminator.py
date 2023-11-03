@@ -59,7 +59,7 @@ class Discriminator(nn.Module):
         # print("ONEHOT IMAGE SHAPE", images_onehot.shape)
 
         x = torch.concatenate((images, images_onehot), dim=1)
-        print("X SHAPE", x.shape) 
+        # print("X SHAPE", x.shape) 
 
 
         return self.pipeline(x)
