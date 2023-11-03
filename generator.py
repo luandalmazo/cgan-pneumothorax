@@ -53,9 +53,9 @@ class Generator(nn.Module):
         self.num_classes = num_classes
 
         self.up0 = nn.Upsample(scale_factor=4, mode="nearest")
-        self.up1 = UpConvBlock(self.input_dim + self.num_classes, hidden_dim * 16)
-        self.up2 = UpConvBlock(hidden_dim * 16, hidden_dim * 8)
-        self.up3 = UpConvBlock(hidden_dim * 8, hidden_dim * 4)
+        self.up1 = UpConvBlock(self.input_dim + self.num_classes, hidden_dim)
+        self.up2 = UpConvBlock(hidden_dim, hidden_dim * 2)
+        self.up3 = UpConvBlock(hidden_dim * 2, hidden_dim * 4)
         self.up4 = UpConvBlock(hidden_dim * 4, hidden_dim * 2)
         self.up5 = UpConvBlock(hidden_dim * 2, hidden_dim)
         self.up6 = UpConvBlock(hidden_dim, im_chan, final_layer=True)

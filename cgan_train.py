@@ -11,7 +11,7 @@ from dataset import PneumoDataset
 from discriminator import Discriminator
 from generator import Generator
 
-from utils import weights_init, show_tensor_images
+from utils import weights_init, show_tensor_grayscale
 from datetime import datetime
 from PIL import Image
 import sys
@@ -49,8 +49,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 gen.to(device)
 disc.to(device)
 
-criterion = nn.MSELoss()
-# criterion = nn.BCEWithLogitsLoss()
+# criterion = nn.MSELoss()
+# criterion = nn.BCELoss()
+criterion = nn.BCEWithLogitsLoss()
 
 
 for epoch in range(epochs):
@@ -112,7 +113,7 @@ for epoch in range(epochs):
         mean_gen_loss += adversarial_loss.item()
         gen_opt.step()
 
-        
+    show_tensor_grayscale(fake.detach(), show="save", name=f"samples/{epoch}")
     sys.stdout.flush()
 
 

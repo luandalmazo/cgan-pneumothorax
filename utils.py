@@ -42,7 +42,7 @@ def show_tensor_grayscale(image_tensor, num_images=250, size=(1, 28, 28), nrow=5
     if show == "plot":
         plt.show()
     elif show == "save":
-        plt.savefig(f"fig{name}.png")
+        plt.savefig(f"{name}.png")
 
 
 
