@@ -179,19 +179,19 @@ class TransposedGenerator(nn.Module):
         '''
        
         x = self.get_input(labels)
-        print(x.shape)
+        # print(x.shape)
         x = self.up1(x)
-        print(x.shape)
+        # print(x.shape)
         x = self.up2(x)
-        print(x.shape)
+        # print(x.shape)
         x = self.up3(x)
-        print(x.shape)
+        # print(x.shape)
         x = self.up4(x)
-        print(x.shape)
+        # print(x.shape)
         x = self.up5(x)
-        print(x.shape)
+        # print(x.shape)
         x = self.up6(x)
-        print(x.shape)
+        # print(x.shape)
         return x
 
 Generator = TransposedGenerator

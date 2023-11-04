@@ -23,26 +23,31 @@ parser.add_argument('--epochs', default=10, type=int)
 parser.add_argument('--glr', default=1e-5, type=float)
 parser.add_argument('--dlr', default=1e-5, type=float)
 parser.add_argument('--batch_size', default=16, type=int)
+parser.add_argument('--checkpoint', default="", type=str)
 args = parser.parse_args()
 
 epochs, glr, dlr = args.epochs, args.glr, args.dlr
 batch_size = args.batch_size
+checkpoint = args.checkpoint
 
 dataset = PneumoDataset(transform=augment_transform)
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-gen = Generator(num_classes=2)
-gen_opt = torch.optim.Adam(gen.parameters(), lr=glr)
+if not checkpoint:
+    gen = Generator(num_classes=2)
+    disc = Discriminator(num_classes=2)
+else:
+    gen = torch.load(f"gen-{checkpoint}.pkl", map_location=device)
+    disc = torch.load(f"disc-{checkpoint}.pkl", map_location=device)
 
-disc = Discriminator(num_classes=2)
 disc_opt = torch.optim.Adam(disc.parameters(), lr=dlr)
-
+gen_opt = torch.optim.Adam(gen.parameters(), lr=glr)
 # gen.apply(weights_init)
 # disc.apply(weights_init)
 
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 # gen = nn.DataParallel(gen)
@@ -53,6 +58,8 @@ disc.to(device)
 # criterion = nn.MSELoss()
 # criterion = nn.BCELoss()
 criterion = nn.BCEWithLogitsLoss()
+
+
 
 
 for epoch in range(epochs):
@@ -116,7 +123,9 @@ for epoch in range(epochs):
 
     to_show = torch.concatenate((fake.detach(), real), dim=0)
     # to_show = real
-    show_tensor_grayscale(to_show, show="save", name=f"samples/{epoch}", nrow=len(real)//2)
+
+    if epoch % 10:
+        show_tensor_grayscale(to_show, show="save", name=f"samples/{epoch}", nrow=len(real)//2)
     sys.stdout.flush()
 
 
