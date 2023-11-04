@@ -4,25 +4,6 @@ from tqdm.auto import tqdm
 from torchvision import transforms
 from utils import show_tensor_images
 
-# self.channels = {       
-# # 4: 512,
-# # 8: 512,
-# # 16: 512,
-# # 32: 512,
-# # 64: 256 * 2,
-# # 128: 128 * 2,
-# # 256: 64 * 2,
-# # 512: 32 * 2,
-# # 1024: 16 * 2,
-# 4: 512,
-# 8: 512,
-# 16: 256,
-# 32: 256,
-# 64: 128,
-# 128: 64,
-# 256: 32
-# }
-
 class ConditionalInput(nn.Module):
     """Constant Input param"""
     def __init__(self, channel, size=4, num_classes=2):
@@ -36,31 +17,16 @@ class ConditionalInput(nn.Module):
         onehot = torch.nn.functional.one_hot(labels, self.num_classes)
         onehot = onehot[:, :, None, None] # no idea what this does, but it works
         images_onehot = onehot.repeat(1, 1, self.size, self.size) # transform onehot vectors into onehot matrices
-
         constant = self.learnable.repeat(batch_size, 1, 1, 1)
-        # print("CONST", constant.shape)
-
         out = torch.concatenate((constant, images_onehot), dim=1)
 
         return out
-
-class NoiseInjection(nn.Module):
-    """Inject random noise into X"""
-    def __init__(self):
-        super().__init__()
-        self.weight = nn.Parameter(torch.zeros(1))
-
-    def forward(self, x, noise=None):
-        if noise is None:
-            batch_size, _, height, width = x.shape
-            noise = x.new_empty(batch_size, 1, height, width).normal_()
-
-        return x + self.weight * noise
 
 class ModulatedConv2d(nn.Module):
     """As in StyleGAN v2, weight modulation and demodulation applied to the weights of the convolution"""
     def __init__(self, in_channels, out_channels, kernel_size, stride, padding, style_dim=256):
         super().__init__()
+        self.eps = 1e-8
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.kernel_size = kernel_size
@@ -77,28 +43,12 @@ class ModulatedConv2d(nn.Module):
         # Style modulation
         style = self.style_mapping(style)
         style = style.view(-1, self.in_channels, 1, 1)
-
-        # print(self.weight)
-        # print(self.weight.shape)
-        # print(style.shape)
-        modulated_weight = self.weight * style
-
-        # from lucidrains
         # Modulate weights
-        # w1 = style[:, None, :, None, None]
-        # w2 = self.weight[None, :, :, :, :]
-        # modulated_weight = w2 * (w1 + 1)
-
-        # print(modulated_weight.shape)
-
-
-        # Perform convolution
+        modulated_weight = self.weight * style
         out = nn.functional.conv2d(x, modulated_weight, bias=self.bias, padding=1)
-
         # Demodulate
         std = torch.std(out, dim=(2, 3), keepdim=True)
         out = out / std
-
         return out
 
 class UpStyleBlock(nn.Module):
@@ -108,12 +58,10 @@ class UpStyleBlock(nn.Module):
     def __init__(self, input_channels, output_channels, kernel_size=3, stride=1, final_layer=False, style_dim=512):
         super().__init__()
         self.style_dim = style_dim
-
         self.up = nn.Upsample(scale_factor=2, mode='bilinear')  # Upsample
         self.conv = ModulatedConv2d(input_channels, output_channels, stride=stride,
                                     kernel_size=kernel_size, style_dim=self.style_dim,
                                     padding=1)
-        self.noise = NoiseInjection()
         if not final_layer:
             self.nonlinear =  nn.ReLU()  # ReLU activation
         else:
@@ -123,7 +71,6 @@ class UpStyleBlock(nn.Module):
     def forward(self, x, style):
         x = self.up(x)
         x = self.conv(x, style)
-        # x = self.noise(x)
         x = self.nonlinear(x)
         return x
 
