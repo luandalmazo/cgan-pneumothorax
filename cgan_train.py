@@ -100,10 +100,10 @@ for epoch in range(epochs):
 
         disc_loss = (disc_fake_loss + disc_real_loss) / 2
         disc_loss.backward()
+        disc_opt.step()
         # print("\tdisc", disc_loss.item())
         mean_disc_loss += disc_loss.item()
         
-        disc_opt.step()
 
 
         # Calculate generator loss
@@ -117,14 +117,14 @@ for epoch in range(epochs):
         # print(adversarial_loss)
 
         adversarial_loss.backward()
+        gen_opt.step()
         # print("\tgen", gen_loss.item())
         mean_gen_loss += adversarial_loss.item()
-        gen_opt.step()
 
-    to_show = torch.concatenate((fake.detach(), real), dim=0)
     # to_show = real
 
     if epoch % 10:
+        to_show = torch.concatenate((fake.detach(), real), dim=0)
         show_tensor_grayscale(to_show, show="save", name=f"samples/{epoch}", nrow=len(real)//2)
     sys.stdout.flush()
 
