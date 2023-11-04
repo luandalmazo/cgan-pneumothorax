@@ -74,7 +74,7 @@ class UpStyleBlock(nn.Module):
         x = self.nonlinear(x)
         return x
 
-class Generator(nn.Module):
+class StyleGenerator(nn.Module):
     '''
     Generator Class with upsample-then-convolution.
     Parameters:
@@ -84,12 +84,8 @@ class Generator(nn.Module):
         hidden_dim: the inner dimension, a scalar
     '''
     def __init__(self, style_dim=256, num_classes=2, im_chan=1):
-        super(Generator, self).__init__()
+        super().__init__()
         self.style_dim = style_dim
-
-        # self.style_transform = nn.Linear(style_dim-num_classes, style_dim-num_classes)
-        # self.style_transform = nn.Linear(style_dim, style_dim)
-
         self.num_classes = num_classes
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         
@@ -110,46 +106,96 @@ class Generator(nn.Module):
         Parameters:
             noise: a noise tensor with dimensions (n_samples, input_dim)
         '''
-
-        # one_hot_vector = torch.nn.functional.one_hot(labels, self.num_classes)
-        # style = torch.concatenate((pre_style, one_hot_vector), dim=1)
-
-        # noise = get_noise(len(labels), self.style_dim-2).to(self.device)
-        # noise = get_noise(1, self.style_dim-self.num_classes).to(self.device).squeeze(0)
         noise = get_noise(1, self.style_dim).to(self.device).squeeze(0)
         # pre_style = self.style_transform(noise)
         # style = pre_style
         style = noise
        
         x = self.input(labels)
-        # print(x.shape)
         x = self.up1(x, style)
-        # print(x.shape)
         x = self.up2(x, style)
-        # print(x.shape)
         x = self.up3(x, style)
-        # print(x.shape)
         x = self.up4(x, style)
-        # print(x.shape)
         x = self.up5(x, style)
-        # print(x.shape)
         x = self.up6(x, style)
         # print(x.shape)
-        # x = self.up7(x, style)
-        # print(x.shape)
-
         return x
 
 def get_noise(n_samples, input_dim, device='cpu'):
-    '''
-    Function for creating noise vectors: Given the dimensions (n_samples, input_dim)
-    creates a tensor of that shape filled with random numbers from the normal distribution.
-    Parameters:
-        n_samples: the number of samples to generate, a scalar
-        input_dim: the dimension of the input vector, a scalar
-        device: the device type
-    '''
     return torch.randn(n_samples, input_dim, device=device)
+
+
+class UpConvBlock(nn.Module):
+    '''
+    Block for upsample-then-convolution in the Generator.
+    '''
+    def __init__(self, input_channels, output_channels, kernel_size=4, stride=2, final_layer=False):
+        super().__init__()
+        self.upconv = nn.ConvTranspose2d(input_channels, output_channels, kernel_size=kernel_size, stride=stride, padding=1)
+
+        if not final_layer:
+            self.nonlinear =  nn.ReLU()  # ReLU activation
+        else:
+            # self.nonlinear =  nn.Tanh()  # Tanh activation
+            self.nonlinear =  nn.Sigmoid()  # Sigma activation
+
+    def forward(self, x):
+        x = self.upconv(x)
+        x = self.nonlinear(x)
+        return x
+
+class TransposedGenerator(nn.Module):
+    def __init__(self, num_classes=2, im_chan=1):
+        super().__init__()
+        self.num_classes = num_classes
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        self.size = 4
+        
+        # self.up0 = nn.Upsample(scale_factor=4, mode="nearest")
+        self.up1 = UpConvBlock(512, 256)
+        self.up2 = UpConvBlock(256, 128)
+        self.up3 = UpConvBlock(128, 64)
+        self.up4 = UpConvBlock(64, 32)
+        self.up5 = UpConvBlock(32, 16)
+        self.up6 = UpConvBlock(16, im_chan, final_layer=True)
+
+    def get_input(self, labels):
+        batch_size = len(labels)
+        onehot = torch.nn.functional.one_hot(labels, self.num_classes)
+        onehot = onehot[:, :, None, None] # no idea what this does, but it works
+        images_onehot = onehot.repeat(1, 1, self.size, self.size) # transform onehot vectors into onehot matrices
+        
+        noise = torch.randn(batch_size, 512-self.num_classes, self.size, self.size).to(self.device)
+        inp = torch.concatenate((noise, images_onehot), dim=1)
+        return inp
+
+    def forward(self, labels):
+        '''
+        Function for completing a forward pass of the generator: Given a noise tensor, 
+        returns generated images.
+        Parameters:
+            noise: a noise tensor with dimensions (n_samples, input_dim)
+        '''
+       
+        x = self.get_input(labels)
+        print(x.shape)
+        x = self.up1(x)
+        print(x.shape)
+        x = self.up2(x)
+        print(x.shape)
+        x = self.up3(x)
+        print(x.shape)
+        x = self.up4(x)
+        print(x.shape)
+        x = self.up5(x)
+        print(x.shape)
+        x = self.up6(x)
+        print(x.shape)
+        return x
+
+Generator = TransposedGenerator
+
 
 if __name__ == "__main__":
     gen = Generator().to("cuda:0")
