@@ -20,8 +20,8 @@ import sys
 # MODEL ARGUMENTS
 parser = argparse.ArgumentParser(description='cgan for data augmentation')
 parser.add_argument('--epochs', default=10, type=int)
-parser.add_argument('--glr', default=2e-5, type=float)
-parser.add_argument('--dlr', default=2e-7, type=float)
+parser.add_argument('--glr', default=3e-5, type=float)
+parser.add_argument('--dlr', default=3e-5, type=float)
 # parser.add_argument('--batch_size', default=16, type=int)
 parser.add_argument('--batch_size', default=64, type=int)
 parser.add_argument('--checkpoint', default="", type=str)
@@ -45,8 +45,8 @@ else:
 
 disc_opt = torch.optim.Adam(disc.parameters(), lr=dlr)
 gen_opt = torch.optim.Adam(gen.parameters(), lr=glr)
-# gen.apply(weights_init)
-# disc.apply(weights_init)
+gen.apply(weights_init)
+disc.apply(weights_init)
 
 
 
@@ -56,8 +56,8 @@ gen_opt = torch.optim.Adam(gen.parameters(), lr=glr)
 gen.to(device)
 disc.to(device)
 
-criterion = nn.MSELoss()
-# criterion = nn.BCELoss()
+# criterion = nn.MSELoss()
+criterion = nn.BCELoss()
 # criterion = nn.BCEWithLogitsLoss()
 
 
@@ -124,9 +124,9 @@ for epoch in range(epochs):
 
     # to_show = real
 
-    # if epoch % 10:
-    to_show = torch.concatenate((fake.detach()[:10], real[:10]), dim=0)
-    show_tensor_grayscale(to_show, show="save", name=f"samples/{epoch}", nrow=5)
+    if (epoch % 10) == 0:
+        to_show = torch.concatenate((fake.detach()[:10], real[:10]), dim=0)
+        show_tensor_grayscale(to_show, show="save", name=f"samples/{epoch}", nrow=5)
     sys.stdout.flush()
 
 
