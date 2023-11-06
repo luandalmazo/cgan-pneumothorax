@@ -125,14 +125,44 @@ def get_noise(n_samples, input_dim, device='cpu'):
     return torch.randn(n_samples, input_dim, device=device)
 
 
+
+class UpUpsampleBlock(nn.Module):
+    '''
+    Block for upsample-then-convolution in the Generator.
+    '''
+    def __init__(self, input_channels, output_channels, kernel_size=3, stride=1, should_norm=True, final_layer=False):
+        super().__init__()
+        self.up = nn.Upsample(scale_factor=2, mode='bilinear')  # Upsample
+        self.conv = nn.Conv2d(input_channels, output_channels, stride=stride,
+                                    kernel_size=kernel_size,padding=1)
+        
+        self.should_norm = should_norm
+        self.norm = nn.InstanceNorm2d(output_channels)
+        if not final_layer:
+            self.nonlinear = nn.ReLU(0.2)  # ReLU activation
+        else:
+            # self.nonlinear =  nn.Tanh()  # Tanh activation
+            self.nonlinear = nn.Sigmoid()  # Sigma activation
+
+    def forward(self, x):
+        x = self.up(x)
+        x = self.conv(x)
+        if self.should_norm:
+            x = self.norm(x)
+        x = self.nonlinear(x)
+        # print(x.shape)
+        return x
+
+
 class UpConvBlock(nn.Module):
     '''
     Block for upsample-then-convolution in the Generator.
     '''
-    def __init__(self, input_channels, output_channels, kernel_size=4, stride=2, final_layer=False):
+    def __init__(self, input_channels, output_channels, kernel_size=4, stride=2, should_norm=True, final_layer=False):
         super().__init__()
         self.upconv = nn.ConvTranspose2d(input_channels, output_channels, kernel_size=kernel_size, stride=stride, padding=1)
-
+        self.should_norm = should_norm
+        self.norm = nn.InstanceNorm2d(output_channels)
         if not final_layer:
             self.nonlinear =  nn.ReLU()  # ReLU activation
         else:
@@ -141,6 +171,8 @@ class UpConvBlock(nn.Module):
 
     def forward(self, x):
         x = self.upconv(x)
+        if self.should_norm:
+            x = self.norm(x)
         x = self.nonlinear(x)
         return x
 
@@ -153,12 +185,18 @@ class TransposedGenerator(nn.Module):
         self.noise_size = 1
         
         # self.up0 = nn.Upsample(scale_factor=4, mode="nearest")
-        self.up1 = UpConvBlock(512, 256)
-        self.up2 = UpConvBlock(256, 128)
-        self.up3 = UpConvBlock(128, 64)
-        self.up4 = UpConvBlock(64, 32)
-        self.up5 = UpConvBlock(32, 16)
-        self.up6 = UpConvBlock(16, im_chan, final_layer=True)
+        # self.up1 = UpUpsampleBlock(256, 128)
+        # self.up2 = UpUpsampleBlock(128, 64)
+        # self.up3 = UpUpsampleBlock(64, 32)
+        # self.up4 = UpUpsampleBlock(32, 16)
+        # self.up5 = UpUpsampleBlock(16, 8)
+        # self.up6 = UpUpsampleBlock(8, im_chan, final_layer=True) self.up1 = UpUpsampleBlock(256, 128)
+        self.up1 = UpUpsampleBlock(256, 128)
+        self.up2 = UpConvBlock(128, 64)
+        self.up3 = UpConvBlock(64, 32)
+        self.up4 = UpConvBlock(32, 16)
+        self.up5 = UpConvBlock(16, 8)
+        self.up6 = UpConvBlock(8, im_chan, final_layer=True)
 
     def get_input(self, labels):
         batch_size = len(labels)
@@ -166,7 +204,7 @@ class TransposedGenerator(nn.Module):
         onehot = onehot[:, :, None, None] # no idea what this does, but it works
         images_onehot = onehot.repeat(1, 1, self.noise_size, self.noise_size) # transform onehot vectors into onehot matrices
         
-        noise = torch.randn(batch_size, 512-self.num_classes, self.noise_size, self.noise_size).to(self.device)
+        noise = torch.randn(batch_size, 256-self.num_classes, self.noise_size, self.noise_size).to(self.device)
         inp = torch.concatenate((noise, images_onehot), dim=1)
         return inp
 

@@ -22,7 +22,8 @@ parser = argparse.ArgumentParser(description='cgan for data augmentation')
 parser.add_argument('--epochs', default=10, type=int)
 parser.add_argument('--glr', default=2e-5, type=float)
 parser.add_argument('--dlr', default=2e-5, type=float)
-parser.add_argument('--batch_size', default=16, type=int)
+# parser.add_argument('--batch_size', default=16, type=int)
+parser.add_argument('--batch_size', default=64, type=int)
 parser.add_argument('--checkpoint', default="", type=str)
 args = parser.parse_args()
 
@@ -124,8 +125,8 @@ for epoch in range(epochs):
     # to_show = real
 
     # if epoch % 10:
-    to_show = torch.concatenate((fake.detach(), real), dim=0)
-    show_tensor_grayscale(to_show, show="save", name=f"samples/{epoch}", nrow=len(real)//2)
+    to_show = torch.concatenate((fake.detach()[:10], real[:10]), dim=0)
+    show_tensor_grayscale(to_show, show="save", name=f"samples/{epoch}", nrow=5)
     sys.stdout.flush()
 
 

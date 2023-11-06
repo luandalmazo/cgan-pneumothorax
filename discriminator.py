@@ -10,22 +10,29 @@ import torchvision
 
 class Conv4(nn.Module):
     """Ck"""
-    def __init__(self, input_channels, output_channels, kernel_size=4):
+    def __init__(self, input_channels, output_channels, kernel_size=4, should_norm=True):
         super().__init__()
 
         self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=kernel_size, stride=2, padding=1, padding_mode="reflect")
+        self.norm = nn.InstanceNorm2d(output_channels)
+        self.should_norm = should_norm
+
+        
         self.activation = nn.LeakyReLU(0.2)
 
         # if should_norm:
             # self.pipeline = nn.Sequential(self.conv, self.norm, self.activation)
         # else:
-        self.pipeline = nn.Sequential(self.conv, self.activation)
+        # self.pipeline = nn.Sequential(self.conv, self.activation)
 
 
     def forward(self, x):
-        y = self.pipeline(x)
-        # print(y.shape)
-        return y
+        x = self.conv(x)
+        if self.should_norm:
+            x = self.norm(x)
+        x = self.activation(x)
+        # print(x.shape)
+        return x
 
 class Discriminator(nn.Module):
     """
