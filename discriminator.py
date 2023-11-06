@@ -58,6 +58,8 @@ class Discriminator(nn.Module):
         images_onehot = onehot.repeat(1, 1, 256, 256) # transform onehot vectors into onehot matrices
         x = torch.concatenate((images, images_onehot), dim=1)
         x = self.pipeline(x)
+
+        x = x.view(len(x), -1) # flatten it?
         return x
 
 if __name__ == "__main__":
