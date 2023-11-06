@@ -137,7 +137,8 @@ class UpUpsampleBlock(nn.Module):
                                     kernel_size=kernel_size,padding=1)
         
         self.should_norm = should_norm
-        self.norm = nn.InstanceNorm2d(output_channels)
+        # self.norm = nn.InstanceNorm2d(output_channels)
+        self.norm = nn.BatchNorm2d(output_channels)
         if not final_layer:
             self.nonlinear = nn.ReLU(0.2)  # ReLU activation
         else:
@@ -162,7 +163,8 @@ class UpConvBlock(nn.Module):
         super().__init__()
         self.upconv = nn.ConvTranspose2d(input_channels, output_channels, kernel_size=kernel_size, stride=stride, padding=1)
         self.should_norm = should_norm
-        self.norm = nn.InstanceNorm2d(output_channels)
+        # self.norm = nn.InstanceNorm2d(output_channels)
+        self.norm = nn.BatchNorm2d(output_channels)
         if not final_layer:
             self.nonlinear =  nn.ReLU()  # ReLU activation
         else:
@@ -185,18 +187,18 @@ class TransposedGenerator(nn.Module):
         self.noise_size = 1
         
         # self.up0 = nn.Upsample(scale_factor=4, mode="nearest")
-        # self.up1 = UpUpsampleBlock(256, 128)
-        # self.up2 = UpUpsampleBlock(128, 64)
-        # self.up3 = UpUpsampleBlock(64, 32)
-        # self.up4 = UpUpsampleBlock(32, 16)
-        # self.up5 = UpUpsampleBlock(16, 8)
-        # self.up6 = UpUpsampleBlock(8, im_chan, final_layer=True) self.up1 = UpUpsampleBlock(256, 128)
         self.up1 = UpUpsampleBlock(256, 128)
-        self.up2 = UpConvBlock(128, 64)
-        self.up3 = UpConvBlock(64, 32)
-        self.up4 = UpConvBlock(32, 16)
-        self.up5 = UpConvBlock(16, 8)
-        self.up6 = UpConvBlock(8, im_chan, final_layer=True)
+        self.up2 = UpUpsampleBlock(128, 64)
+        self.up3 = UpUpsampleBlock(64, 32)
+        self.up4 = UpUpsampleBlock(32, 16)
+        self.up5 = UpUpsampleBlock(16, 8)
+        self.up6 = UpUpsampleBlock(8, im_chan, final_layer=True)
+        # self.up1 = UpConvBlock(256, 128)
+        # self.up2 = UpConvBlock(128, 64)
+        # self.up3 = UpConvBlock(64, 32)
+        # self.up4 = UpConvBlock(32, 16)
+        # self.up5 = UpConvBlock(16, 8)
+        # self.up6 = UpConvBlock(8, im_chan, final_layer=True)
 
     def get_input(self, labels):
         batch_size = len(labels)

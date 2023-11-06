@@ -14,7 +14,8 @@ class Conv4(nn.Module):
         super().__init__()
 
         self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=kernel_size, stride=2, padding=1, padding_mode="reflect")
-        self.norm = nn.InstanceNorm2d(output_channels)
+        # self.norm = nn.InstanceNorm2d(output_channels)
+        self.norm = nn.BatchNorm2d(output_channels)
         self.should_norm = should_norm
 
         

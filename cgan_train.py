@@ -21,7 +21,7 @@ import sys
 parser = argparse.ArgumentParser(description='cgan for data augmentation')
 parser.add_argument('--epochs', default=10, type=int)
 parser.add_argument('--glr', default=2e-5, type=float)
-parser.add_argument('--dlr', default=2e-5, type=float)
+parser.add_argument('--dlr', default=2e-7, type=float)
 # parser.add_argument('--batch_size', default=16, type=int)
 parser.add_argument('--batch_size', default=64, type=int)
 parser.add_argument('--checkpoint', default="", type=str)
@@ -56,9 +56,9 @@ gen_opt = torch.optim.Adam(gen.parameters(), lr=glr)
 gen.to(device)
 disc.to(device)
 
-# criterion = nn.MSELoss()
+criterion = nn.MSELoss()
 # criterion = nn.BCELoss()
-criterion = nn.BCEWithLogitsLoss()
+# criterion = nn.BCEWithLogitsLoss()
 
 
 
