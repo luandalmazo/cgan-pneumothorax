@@ -7,7 +7,7 @@ import torchvision
 import torch
 import argparse
 
-from dataset import PneumoDataset, augment_transform
+from dataset import PneumoDataset, augment_transform, small_transform
 from discriminator import Discriminator
 from generator import Generator
 
@@ -20,8 +20,8 @@ import sys
 # MODEL ARGUMENTS
 parser = argparse.ArgumentParser(description='cgan for data augmentation')
 parser.add_argument('--epochs', default=10, type=int)
-parser.add_argument('--glr', default=2e-4, type=float)
-parser.add_argument('--dlr', default=2e-4, type=float)
+parser.add_argument('--glr', default=2e-5, type=float)
+parser.add_argument('--dlr', default=2e-5, type=float)
 parser.add_argument('--batch_size', default=16, type=int)
 parser.add_argument('--checkpoint', default="", type=str)
 args = parser.parse_args()
@@ -30,7 +30,7 @@ epochs, glr, dlr = args.epochs, args.glr, args.dlr
 batch_size = args.batch_size
 checkpoint = args.checkpoint
 
-dataset = PneumoDataset(transform=augment_transform)
+dataset = PneumoDataset(transform=small_transform)  
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -123,9 +123,9 @@ for epoch in range(epochs):
 
     # to_show = real
 
-    if epoch % 10:
-        to_show = torch.concatenate((fake.detach(), real), dim=0)
-        show_tensor_grayscale(to_show, show="save", name=f"samples/{epoch}", nrow=len(real)//2)
+    # if epoch % 10:
+    to_show = torch.concatenate((fake.detach(), real), dim=0)
+    show_tensor_grayscale(to_show, show="save", name=f"samples/{epoch}", nrow=len(real)//2)
     sys.stdout.flush()
 
 

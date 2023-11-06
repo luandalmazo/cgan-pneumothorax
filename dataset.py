@@ -19,6 +19,15 @@ default_transform = transforms.Compose([
     # transforms.CenterCrop(224),
     # transforms.Normalize(mean=[0.5], std=[0.5])
 ])
+
+small_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Resize(64, interpolation=transforms.InterpolationMode.BILINEAR,antialias=False),
+    # transforms.CenterCrop(224),
+    # transforms.Normalize(mean=[0.5], std=[0.5])
+])
+
+
 class PneumoDataset(Dataset):
     def __init__(self, transform=default_transform):
         self.transform = transform

@@ -150,7 +150,7 @@ class TransposedGenerator(nn.Module):
         self.num_classes = num_classes
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-        self.size = 4
+        self.noise_size = 1
         
         # self.up0 = nn.Upsample(scale_factor=4, mode="nearest")
         self.up1 = UpConvBlock(512, 256)
@@ -164,9 +164,9 @@ class TransposedGenerator(nn.Module):
         batch_size = len(labels)
         onehot = torch.nn.functional.one_hot(labels, self.num_classes)
         onehot = onehot[:, :, None, None] # no idea what this does, but it works
-        images_onehot = onehot.repeat(1, 1, self.size, self.size) # transform onehot vectors into onehot matrices
+        images_onehot = onehot.repeat(1, 1, self.noise_size, self.noise_size) # transform onehot vectors into onehot matrices
         
-        noise = torch.randn(batch_size, 512-self.num_classes, self.size, self.size).to(self.device)
+        noise = torch.randn(batch_size, 512-self.num_classes, self.noise_size, self.noise_size).to(self.device)
         inp = torch.concatenate((noise, images_onehot), dim=1)
         return inp
 
