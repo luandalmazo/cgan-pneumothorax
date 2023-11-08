@@ -4,6 +4,7 @@ import os
 import pydicom
 from torchvision import transforms
 import pandas as pd
+import glob
 
 
 augment_transform = transforms.Compose([
@@ -60,9 +61,9 @@ class PneumoDataset(Dataset):
         self.transform = transform
 
         
-        self.dir = "./dataset_full/dicom-images-train" if train else "./dataset_full/dicom-images-test"
+        self.dir = "./dataset_full/dicom-images-train/*/*/*.dcm" if train else "./dataset_full/dicom-images-test/*/*/*.dcm"
 
-        self.list_dir = sorted(os.listdir(self.dir))
+        self.list_dir = sorted(glob.glob(self.dir))
             
         self.dataset = pd.read_csv('./dataset_full/train-rle.csv', delimiter="," )
 
@@ -71,7 +72,8 @@ class PneumoDataset(Dataset):
     
     def __getitem__(self, index):
 
-        dicom_file, label = self.dataset[index]
+        dicom_file, label = self.dataset.iloc[index]
+        print(dicom_file)
         image = pydicom.dcmread(dicom_file)
         image_pixel_data = image.pixel_array
         image_pixel_data = self.transform(image_pixel_data)
@@ -80,6 +82,8 @@ class PneumoDataset(Dataset):
         
         return image_pixel_data, float(label)
         
-
-
+if __name__ == '__main__':
+    dataset = PneumoDataset()
+    print(dataset.__getitem__(3))
+    # print(dataset.list_dir)
         
