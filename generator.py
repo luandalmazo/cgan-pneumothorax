@@ -1,130 +1,126 @@
 import torch
 from torch import nn
-from tqdm.auto import tqdm
-from torchvision import transforms
 from utils import show_tensor_images
 
-# class ConditionalInput(nn.Module):
-#     """Constant Input param"""
-#     def __init__(self, channel, size=4, num_classes=2):
-#         super().__init__()
-#         self.size = size
-#         self.num_classes = num_classes
-#         self.learnable = nn.Parameter(torch.randn(1, channel-num_classes, size, size))
+class ConditionalInput(nn.Module):
+    """Constant Input param"""
+    def __init__(self, channel, size=4, num_classes=2):
+        super().__init__()
+        self.size = size
+        self.num_classes = num_classes
+        self.learnable = nn.Parameter(torch.randn(1, channel-num_classes, size, size))
 
-#     def forward(self, labels):
-#         batch_size = len(labels)
-#         onehot = torch.nn.functional.one_hot(labels, self.num_classes)
-#         onehot = onehot[:, :, None, None] # no idea what this does, but it works
-#         images_onehot = onehot.repeat(1, 1, self.size, self.size) # transform onehot vectors into onehot matrices
-#         constant = self.learnable.repeat(batch_size, 1, 1, 1)
-#         out = torch.concatenate((constant, images_onehot), dim=1)
+    def forward(self, labels):
+        batch_size = len(labels)
+        onehot = torch.nn.functional.one_hot(labels, self.num_classes)
+        onehot = onehot[:, :, None, None] # no idea what this does, but it works
+        images_onehot = onehot.repeat(1, 1, self.size, self.size) # transform onehot vectors into onehot matrices
+        constant = self.learnable.repeat(batch_size, 1, 1, 1)
+        out = torch.concatenate((constant, images_onehot), dim=1)
 
-#         return out
+        return out
 
-# class ModulatedConv2d(nn.Module):
-#     """As in StyleGAN v2, weight modulation and demodulation applied to the weights of the convolution"""
-#     def __init__(self, in_channels, out_channels, kernel_size, stride, padding, style_dim=256):
-#         super().__init__()
-#         self.eps = 1e-8
-#         self.in_channels = in_channels
-#         self.out_channels = out_channels
-#         self.kernel_size = kernel_size
-#         self.stride = stride
-#         self.padding = padding
-#         self.style_dim = style_dim
-#         # Initialize weights and biases
-#         self.weight = nn.Parameter(torch.randn(out_channels, in_channels, kernel_size, kernel_size))
-#         self.bias = nn.Parameter(torch.zeros(out_channels))
-#         # Style modulation network
-#         self.style_mapping = nn.Linear(style_dim, in_channels)
+class ModulatedConv2d(nn.Module):
+    """As in StyleGAN v2, weight modulation and demodulation applied to the weights of the convolution"""
+    def __init__(self, in_channels, out_channels, kernel_size, stride, padding, style_dim=256):
+        super().__init__()
+        self.eps = 1e-8
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.style_dim = style_dim
+        # Initialize weights and biases
+        self.weight = nn.Parameter(torch.randn(out_channels, in_channels, kernel_size, kernel_size))
+        self.bias = nn.Parameter(torch.zeros(out_channels))
+        # Style modulation network
+        self.style_mapping = nn.Linear(style_dim, in_channels)
         
-#     def forward(self, x, style):
-#         # Style modulation
-#         style = self.style_mapping(style)
-#         style = style.view(-1, self.in_channels, 1, 1)
-#         # Modulate weights
-#         modulated_weight = self.weight * style
-#         out = nn.functional.conv2d(x, modulated_weight, bias=self.bias, padding=1)
-#         # Demodulate
-#         std = torch.std(out, dim=(2, 3), keepdim=True)
-#         out = out / std
-#         return out
+    def forward(self, x, style):
+        # Style modulation
+        style = self.style_mapping(style)
+        style = style.view(-1, self.in_channels, 1, 1)
+        # Modulate weights
+        modulated_weight = self.weight * style
+        out = nn.functional.conv2d(x, modulated_weight, bias=self.bias, padding=1)
+        # Demodulate
+        std = torch.std(out, dim=(2, 3), keepdim=True)
+        out = out / std
+        return out
 
-# class UpStyleBlock(nn.Module):
-#     '''
-#     Block for upsample-then-convolution in the Generator.
-#     '''
-#     def __init__(self, input_channels, output_channels, kernel_size=3, stride=1, final_layer=False, style_dim=512):
-#         super().__init__()
-#         self.style_dim = style_dim
-#         self.up = nn.Upsample(scale_factor=2, mode='bilinear')  # Upsample
-#         self.conv = ModulatedConv2d(input_channels, output_channels, stride=stride,
-#                                     kernel_size=kernel_size, style_dim=self.style_dim,
-#                                     padding=1)
-#         if not final_layer:
-#             self.nonlinear =  nn.ReLU()  # ReLU activation
-#         else:
-#             # self.nonlinear =  nn.Tanh()  # Tanh activation
-#             self.nonlinear =  nn.Sigmoid()  # Sigma activation
+class UpStyleBlock(nn.Module):
+    '''
+    Block for upsample-then-convolution in the Generator.
+    '''
+    def __init__(self, input_channels, output_channels, kernel_size=3, stride=1, final_layer=False, style_dim=512):
+        super().__init__()
+        self.style_dim = style_dim
+        self.up = nn.Upsample(scale_factor=2, mode='bilinear')  # Upsample
+        self.conv = ModulatedConv2d(input_channels, output_channels, stride=stride,
+                                    kernel_size=kernel_size, style_dim=self.style_dim,
+                                    padding=1)
+        if not final_layer:
+            self.nonlinear =  nn.ReLU()  # ReLU activation
+        else:
+            # self.nonlinear =  nn.Tanh()  # Tanh activation
+            self.nonlinear =  nn.Sigmoid()  # Sigma activation
 
-#     def forward(self, x, style):
-#         x = self.up(x)
-#         x = self.conv(x, style)
-#         x = self.nonlinear(x)
-#         return x
+    def forward(self, x, style):
+        x = self.up(x)
+        x = self.conv(x, style)
+        x = self.nonlinear(x)
+        return x
 
-# class StyleGenerator(nn.Module):
-#     '''
-#     Generator Class with upsample-then-convolution.
-#     Parameters:
-#         input_dim: the dimension of the input vector, a scalar
-#         im_chan: the number of channels in the images, fitted for the dataset used, a scalar
-#               (MNIST is black-and-white, so 1 channel is your default)
-#         hidden_dim: the inner dimension, a scalar
-#     '''
-#     def __init__(self, style_dim=256, num_classes=2, im_chan=1):
-#         super().__init__()
-#         self.style_dim = style_dim
-#         self.num_classes = num_classes
-#         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+class StyleGenerator(nn.Module):
+    '''
+    Generator Class with upsample-then-convolution.
+    Parameters:
+        input_dim: the dimension of the input vector, a scalar
+        im_chan: the number of channels in the images, fitted for the dataset used, a scalar
+              (MNIST is black-and-white, so 1 channel is your default)
+        hidden_dim: the inner dimension, a scalar
+    '''
+    def __init__(self, style_dim=256, num_classes=2, im_chan=1):
+        super().__init__()
+        self.style_dim = style_dim
+        self.num_classes = num_classes
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         
-#         self.input = ConditionalInput(self.style_dim, size=4, num_classes=self.num_classes)
+        self.input = ConditionalInput(self.style_dim, size=1, num_classes=self.num_classes)
 
-#         # self.up0 = nn.Upsample(scale_factor=4, mode="nearest")
-#         self.up1 = UpStyleBlock(self.style_dim, 256, style_dim=style_dim)
-#         self.up2 = UpStyleBlock(256, 128, style_dim=style_dim)
-#         self.up3 = UpStyleBlock(128, 64, style_dim=style_dim)
-#         self.up4 = UpStyleBlock(64, 32, style_dim=style_dim)
-#         self.up5 = UpStyleBlock(32, 16, style_dim=style_dim)
-#         self.up6 = UpStyleBlock(16, im_chan, final_layer=True, style_dim=style_dim)
+        # self.up0 = nn.Upsample(scale_factor=4, mode="nearest")
+        self.up1 = UpStyleBlock(self.style_dim, 256, style_dim=style_dim)
+        self.up2 = UpStyleBlock(256, 128, style_dim=style_dim)
+        self.up3 = UpStyleBlock(128, 64, style_dim=style_dim)
+        self.up4 = UpStyleBlock(64, 32, style_dim=style_dim)
+        self.up5 = UpStyleBlock(32, 16, style_dim=style_dim)
+        self.up6 = UpStyleBlock(16, im_chan, final_layer=True, style_dim=style_dim)
 
-#     def forward(self, labels):
-#         '''
-#         Function for completing a forward pass of the generator: Given a noise tensor, 
-#         returns generated images.
-#         Parameters:
-#             noise: a noise tensor with dimensions (n_samples, input_dim)
-#         '''
-#         noise = get_noise(1, self.style_dim).to(self.device).squeeze(0)
-#         # pre_style = self.style_transform(noise)
-#         # style = pre_style
-#         style = noise
+    def forward(self, labels):
+        '''
+        Function for completing a forward pass of the generator: Given a noise tensor, 
+        returns generated images.
+        Parameters:
+            noise: a noise tensor with dimensions (n_samples, input_dim)
+        '''
+        noise = get_noise(1, self.style_dim).to(self.device).squeeze(0)
+        # pre_style = self.style_transform(noise)
+        # style = pre_style
+        style = noise
        
-#         x = self.input(labels)
-#         x = self.up1(x, style)
-#         x = self.up2(x, style)
-#         x = self.up3(x, style)
-#         x = self.up4(x, style)
-#         x = self.up5(x, style)
-#         x = self.up6(x, style)
-#         # print(x.shape)
-#         return x
+        x = self.input(labels)
+        x = self.up1(x, style)
+        x = self.up2(x, style)
+        x = self.up3(x, style)
+        x = self.up4(x, style)
+        x = self.up5(x, style)
+        x = self.up6(x, style)
+        # print(x.shape)
+        return x
 
-# def get_noise(n_samples, input_dim, device='cpu'):
-#     return torch.randn(n_samples, input_dim, device=device)
-
-
+def get_noise(n_samples, input_dim, device='cpu'):
+    return torch.randn(n_samples, input_dim, device=device)
 
 # class UpUpsampleBlock(nn.Module):
 #     '''
@@ -154,7 +150,6 @@ from utils import show_tensor_images
 #         # print(x.shape)
 #         return x
 
-
 # class UpConvBlock(nn.Module):
 #     '''
 #     Block for upsample-then-convolution in the Generator.
@@ -183,16 +178,7 @@ from utils import show_tensor_images
 #         super().__init__()
 #         self.num_classes = num_classes
 #         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
 #         self.noise_size = 1
-        
-#         # self.up0 = nn.Upsample(scale_factor=4, mode="nearest")
-#         self.up1 = UpUpsampleBlock(256, 128)
-#         self.up2 = UpUpsampleBlock(128, 64)
-#         self.up3 = UpUpsampleBlock(64, 32)
-#         self.up4 = UpUpsampleBlock(32, 16)
-#         self.up5 = UpUpsampleBlock(16, 8)
-#         self.up6 = UpUpsampleBlock(8, im_chan, final_layer=True)
 #         # self.up1 = UpConvBlock(256, 128)
 #         # self.up2 = UpConvBlock(128, 64)
 #         # self.up3 = UpConvBlock(64, 32)
@@ -205,40 +191,58 @@ from utils import show_tensor_images
 #         onehot = torch.nn.functional.one_hot(labels, self.num_classes)
 #         onehot = onehot[:, :, None, None] # no idea what this does, but it works
 #         images_onehot = onehot.repeat(1, 1, self.noise_size, self.noise_size) # transform onehot vectors into onehot matrices
+#         noise = torch.randn(batch_size, 256-self.num_classes, self.noise_size, self.noise_size).to(self.device)
+#         inp = torch.concatenate((noise, images_onehot), dim=1)
+#         return inp
+
+#     def forward(self, labels):
+#         x = self.get_input(labels)
+#         x = self.up1(x)
+#         x = self.up2(x)
+#         x = self.up3(x)
+#         x = self.up4(x)
+#         x = self.up5(x)
+#         x = self.up6(x)
+#         return x
+
+# class UpsampleGenerator(nn.Module):
+#     def __init__(self, num_classes=2, im_chan=1):
+#         super().__init__()
+#         self.num_classes = num_classes
+#         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#         self.noise_size = 1
+        
+#         # self.up0 = nn.Upsample(scale_factor=4, mode="nearest")
+#         self.up1 = UpUpsampleBlock(256, 128)
+#         self.up2 = UpUpsampleBlock(128, 64)
+#         self.up3 = UpUpsampleBlock(64, 32)
+#         self.up4 = UpUpsampleBlock(32, 16)
+#         self.up5 = UpUpsampleBlock(16, 8)
+#         self.up6 = UpUpsampleBlock(8, im_chan, final_layer=True)
+
+#     def get_input(self, labels):
+#         batch_size = len(labels)
+#         onehot = torch.nn.functional.one_hot(labels, self.num_classes)
+#         onehot = onehot[:, :, None, None] # no idea what this does, but it works
+#         images_onehot = onehot.repeat(1, 1, self.noise_size, self.noise_size) # transform onehot vectors into onehot matrices
         
 #         noise = torch.randn(batch_size, 256-self.num_classes, self.noise_size, self.noise_size).to(self.device)
 #         inp = torch.concatenate((noise, images_onehot), dim=1)
 #         return inp
 
 #     def forward(self, labels):
-#         '''
-#         Function for completing a forward pass of the generator: Given a noise tensor, 
-#         returns generated images.
-#         Parameters:
-#             noise: a noise tensor with dimensions (n_samples, input_dim)
-#         '''
-       
 #         x = self.get_input(labels)
-#         # print(x.shape)
 #         x = self.up1(x)
-#         # print(x.shape)
 #         x = self.up2(x)
-#         # print(x.shape)
 #         x = self.up3(x)
-#         # print(x.shape)
 #         x = self.up4(x)
-#         # print(x.shape)
 #         x = self.up5(x)
-#         # print(x.shape)
 #         x = self.up6(x)
-#         # print(x.shape)
 #         return x
 
-# Generator Code
-
-class Generator(nn.Module):
+class DCGenerator(nn.Module):
     def __init__(self, nz=100, ngf=128, nc=1, num_classes=2):
-        super(Generator, self).__init__()
+        super().__init__()
         self.num_classes = 2
         self.nz = nz
         self.ngf = ngf
@@ -251,19 +255,28 @@ class Generator(nn.Module):
             nn.BatchNorm2d(ngf * 8),
             nn.ReLU(True),
             # state size. ``(ngf*8) x 4 x 4``
-            nn.ConvTranspose2d(ngf * 8, ngf * 4, 4, 2, 1, bias=False),
+            # nn.ConvTranspose2d(ngf * 8, ngf * 4, 4, 2, 1, bias=False),
+            nn.Upsample(scale_factor=2, mode='nearest'),  # Upsample
+            nn.Conv2d(ngf * 8, ngf * 4, stride=1, kernel_size=3,padding=1, bias=False),
             nn.BatchNorm2d(ngf * 4),
             nn.ReLU(True),
             # state size. ``(ngf*4) x 8 x 8``
-            nn.ConvTranspose2d( ngf * 4, ngf * 2, 4, 2, 1, bias=False),
+            # nn.ConvTranspose2d( ngf * 4, ngf * 2, 4, 2, 1, bias=False),
+            nn.Upsample(scale_factor=2, mode='nearest'),  # Upsample
+            nn.Conv2d(ngf * 4, ngf * 2, stride=1, kernel_size=3,padding=1, bias=False),
             nn.BatchNorm2d(ngf * 2),
             nn.ReLU(True),
             # state size. ``(ngf*2) x 16 x 16``
-            nn.ConvTranspose2d( ngf * 2, ngf, 4, 2, 1, bias=False),
+            # nn.ConvTranspose2d( ngf * 2, ngf, 4, 2, 1, bias=False),
+            nn.Upsample(scale_factor=2, mode='bilinear'),  # Upsample
+            nn.Conv2d(ngf * 2, ngf, stride=1, kernel_size=3,padding=1, bias=False),
+
             nn.BatchNorm2d(ngf),
             nn.ReLU(True),
             # state size. ``(ngf) x 32 x 32``
-            nn.ConvTranspose2d( ngf, nc, 4, 2, 1, bias=False),
+            # nn.ConvTranspose2d( ngf, nc, 4, 2, 1, bias=False),
+            nn.Upsample(scale_factor=2, mode='bilinear'),  # Upsample
+            nn.Conv2d(ngf, nc, stride=1, kernel_size=3,padding=1, bias=False),
             nn.Tanh()
             # state size. ``(nc) x 64 x 64``
         )
@@ -273,11 +286,8 @@ class Generator(nn.Module):
         onehot = torch.nn.functional.one_hot(labels, self.num_classes).unsqueeze(2).unsqueeze(3)
         # onehot = onehot[:, :, None, None] # no idea what this does, but it works
         # images_onehot = onehot.repeat(1, 1, self.noise_size, self.noise_size) # transform onehot vectors into onehot matrices
-        
         noise = torch.randn(batch_size, self.nz-self.num_classes, 1, 1).to(self.device)
 
-        # print(noise, onehot)
-        # print(noise.shape, onehot.shape)
         inp = torch.concatenate((noise, onehot), dim=1)
         return inp
 
@@ -286,6 +296,7 @@ class Generator(nn.Module):
         return self.main(input)
 
 
+Generator = StyleGenerator
 
 if __name__ == "__main__":
     gen = Generator().to("cuda:0")
