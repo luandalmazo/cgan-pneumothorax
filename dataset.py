@@ -72,8 +72,18 @@ class PneumoDataset(Dataset):
     
     def __getitem__(self, index):
 
-        dicom_file, label = self.dataset.iloc[index]
-        print(dicom_file)
+        dicom_file = self.list_dir[index]
+        # print(dicom_file)
+
+        dicom_basename = os.path.basename(dicom_file)
+        dicom_basename = os.path.splitext(dicom_basename)[0]
+        # print("DICOM BASENAME", dicom_basename)
+
+        # search for dicom basename
+        query = self.dataset[self.dataset["ImageId"] == dicom_basename] 
+        # return type is a one-row dataframe. PixelEncondings is column index 1.
+        label = query.iloc[0][1].strip()
+
         image = pydicom.dcmread(dicom_file)
         image_pixel_data = image.pixel_array
         image_pixel_data = self.transform(image_pixel_data)
