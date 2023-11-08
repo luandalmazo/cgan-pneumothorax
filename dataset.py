@@ -62,8 +62,10 @@ class PneumoDataset(Dataset):
 
         
         self.dir = "./dataset_full/dicom-images-train/*/*/*.dcm" if train else "./dataset_full/dicom-images-test/*/*/*.dcm"
+        # self.dir = "./dataset_full/dicom-images-train/" if train else "./dataset_full/dicom-images-test/"
 
         self.list_dir = sorted(glob.glob(self.dir))
+        # print("LIST DIR TYPE IS", type(self.list_dir))
             
         self.dataset = pd.read_csv('./dataset_full/train-rle.csv', delimiter="," )
 
@@ -72,17 +74,25 @@ class PneumoDataset(Dataset):
     
     def __getitem__(self, index):
 
-        dicom_file = self.list_dir[index]
-        # print(dicom_file)
+        dicom_basename = self.dataset.iloc[index][0]
+        # print(dicom_basename)
 
-        dicom_basename = os.path.basename(dicom_file)
-        dicom_basename = os.path.splitext(dicom_basename)[0]
-        # print("DICOM BASENAME", dicom_basename)
+        label = self.dataset.iloc[index][1]
 
-        # search for dicom basename
-        query = self.dataset[self.dataset["ImageId"] == dicom_basename] 
-        # return type is a one-row dataframe. PixelEncondings is column index 1.
-        label = query.iloc[0][1].strip()
+        matching_files = [file for file in self.list_dir if dicom_basename in file]
+
+        try:
+            dicom_file = matching_files[0]
+        except IndexError:
+            raise Exception("BRUH MOMENTO DATASET IS BUILT DIFFERENT")
+
+        # dicom_file = self.list_dir[index]
+        # dicom_basename = os.path.basename(dicom_file)
+        # dicom_basename = os.path.splitext(dicom_basename)[0]
+        # # search for dicom basename
+        # query = self.dataset[self.dataset["ImageId"] == dicom_basename] 
+        # # return type is a one-row dataframe. PixelEncondings is column index 1.
+        # label = query.iloc[0][1].strip()
 
         image = pydicom.dcmread(dicom_file)
         image_pixel_data = image.pixel_array
@@ -94,6 +104,6 @@ class PneumoDataset(Dataset):
         
 if __name__ == '__main__':
     dataset = PneumoDataset()
-    print(dataset.__getitem__(3))
+    print(dataset.__getitem__(4))
     # print(dataset.list_dir)
         

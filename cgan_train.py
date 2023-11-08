@@ -20,8 +20,8 @@ import sys
 # MODEL ARGUMENTS
 parser = argparse.ArgumentParser(description='cgan for data augmentation')
 parser.add_argument('--epochs', default=10, type=int)
-parser.add_argument('--glr', default=1e-7, type=float)
-parser.add_argument('--dlr', default=1e-7, type=float)
+parser.add_argument('--glr', default=3e-5, type=float)
+parser.add_argument('--dlr', default=3e-5, type=float)
 # parser.add_argument('--batch_size', default=16, type=int)
 parser.add_argument('--batch_size', default=64, type=int)
 parser.add_argument('--checkpoint', default="", type=str)
@@ -122,7 +122,8 @@ for epoch in range(epochs):
 
     # to_show = real
 
-    if (epoch % 10) == 0:
+    # if (epoch % 10) == 0:
+    if True:
         to_show = torch.concatenate((fake.detach()[:10], real[:10]), dim=0)
         show_tensor_grayscale(to_show, show="save", name=f"samples/{epoch}", nrow=5)
 
@@ -131,7 +132,7 @@ for epoch in range(epochs):
     print("gen loss:", mean_gen_loss / image_count)
     sys.stdout.flush()
 
-    if ((epoch % 200) == 0) and (epoch != 0):
+    if ((epoch % 50) == 0) and (epoch != 0):
         time = str(datetime.now())
         torch.save(gen, f"models/gen-{time}-epoch{epoch}.pkl")
 
