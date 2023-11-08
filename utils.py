@@ -38,21 +38,16 @@ def show_tensor_grayscale(image_tensor, num_images=250, size=(1, 28, 28), nrow=5
     image_grid = make_grid(image_unflat[:num_images], nrow=nrow)
 
     plt.imshow(image_grid.permute(1, 2, 0).squeeze())
+
+    # Disable ticks?
+    plt.xticks([])
+    plt.yticks([])
     # plt.imshow(image_grid.squeeze())
     if show == "plot":
         plt.show()
     elif show == "save":
         plt.savefig(f"{name}.png")
 
-
-
-# def weights_init(m):
-#     # if isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
-#     if isinstance(m, nn.Conv2d):
-#         nn.init.normal_(m.weight, 0.0, 0.02)
-#     # if isinstance(m, nn.InstanceNorm2d):
-#     #     nn.init.normal(m.weight, 0.0, 0.02)
-#     #     nn.init.constant(m.bias, 0)
 
 def weights_init(m):
     classname = m.__class__.__name__
@@ -61,3 +56,4 @@ def weights_init(m):
     elif classname.find('BatchNorm') != -1:
         nn.init.normal_(m.weight.data, 1.0, 0.02)
         nn.init.constant_(m.bias.data, 0)
+
