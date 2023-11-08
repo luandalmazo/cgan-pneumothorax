@@ -8,7 +8,7 @@ import torch
 import argparse
 
 from dataset import PneumoDataset, augment_transform, small_transform
-from discriminator import Discriminator
+from discriminator import Discriminator, get_gradient_penalty
 from generator import Generator
 
 from utils import weights_init, show_tensor_grayscale
@@ -25,11 +25,13 @@ parser.add_argument('--dlr', default=3e-5, type=float)
 # parser.add_argument('--batch_size', default=16, type=int)
 parser.add_argument('--batch_size', default=64, type=int)
 parser.add_argument('--checkpoint', default="", type=str)
+parser.add_argument('--wgan_coeff', default=10.0, type=float)
 args = parser.parse_args()
 
 epochs, glr, dlr = args.epochs, args.glr, args.dlr
 batch_size = args.batch_size
 checkpoint = args.checkpoint
+wgan_coeff = args.wgan_coeff
 
 dataset = PneumoDataset(transform=small_transform)  
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
@@ -57,8 +59,6 @@ disc.to(device)
 # criterion = nn.MSELoss()
 criterion = nn.BCELoss()
 # criterion = nn.BCEWithLogitsLoss()
-
-
 
 
 for epoch in range(epochs):
@@ -93,18 +93,19 @@ for epoch in range(epochs):
 
         fake = gen_fake.detach()
         fake_result = disc(fake, label)
-        disc_fake_loss = criterion(fake_result, torch.zeros_like(fake_result))
         real_result = disc(real, label)
-        disc_real_loss = criterion(real_result, torch.ones_like(real_result))
-
-        disc_loss = (disc_fake_loss + disc_real_loss) / 2
+        
+        # disc_fake_loss = criterion(fake_result, torch.zeros_like(fake_result))
+        # disc_real_loss = criterion(real_result, torch.ones_like(real_result))
+        # disc_loss = (disc_fake_loss + disc_real_loss) / 2
+        penalty = get_gradient_penalty(disc, real, fake, label)
+        disc_loss = torch.mean(fake_result) - torch.mean(real_result) + wgan_coeff * penalty
+        
         disc_loss.backward()
         disc_opt.step()
         # print("\tdisc", disc_loss.item())
         mean_disc_loss += disc_loss.item()
         
-
-
         # Calculate generator loss
         # adversarial loss
         gen_opt.zero_grad()
@@ -112,7 +113,8 @@ for epoch in range(epochs):
         fake = gen_fake # non-detached
         disc_result = disc(fake, label) 
 
-        adversarial_loss = criterion(disc_result, torch.ones_like(disc_result))
+        # adversarial_loss = criterion(disc_result, torch.ones_like(disc_result))
+        adversarial_loss = -1 * torch.mean(disc_result)
         # print(adversarial_loss)
 
         adversarial_loss.backward()

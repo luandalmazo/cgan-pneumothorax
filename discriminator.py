@@ -106,7 +106,7 @@ class Discriminator(nn.Module):
             nn.LeakyReLU(0.2, inplace=True),
             # state size. ``(ndf*8) x 4 x 4``
             nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False),
-            nn.Sigmoid()
+            # nn.Sigmoid()
         )
 
     def forward(self, images, labels):
@@ -123,20 +123,10 @@ class Discriminator(nn.Module):
     
 
 
-
-
-
-
-
-
-
-
-
-
 ######## 
 # WGAN UTILS
 
-def get_gradient(crit, real, fake):
+def get_gradient_penalty(crit, real, fake, label):
     '''
     Return the gradient of the critic's scores with respect to mixes of real and fake images.
     Parameters:
@@ -153,14 +143,10 @@ def get_gradient(crit, real, fake):
     mixed_images = real * epsilon + fake * (1 - epsilon)
 
     # Calculate the critic's scores on the mixed images
-    mixed_scores = crit(mixed_images)
+    mixed_scores = crit(mixed_images, label)
     
     # Take the gradient of the scores with respect to the images
     gradient = torch.autograd.grad(
-        # Note: You need to take the gradient of outputs with respect to inputs.
-        # This documentation may be useful, but it should not be necessary:
-        # https://pytorch.org/docs/stable/autograd.html#torch.autograd.grad
-        #### START CODE HERE ####
         inputs=mixed_images,
         outputs=mixed_scores,
         #### END CODE HERE ####
@@ -169,7 +155,16 @@ def get_gradient(crit, real, fake):
         create_graph=True,
         retain_graph=True,
     )[0]
-    return gradient
+    gradient = gradient.view(len(gradient), -1)
+
+    # Calculate the magnitude of every row
+    gradient_norm = gradient.norm(2, dim=1)
+    
+    # Penalize the mean squared distance of the gradient norms from 1
+    #### START CODE HERE ####
+    penalty = torch.mean((gradient_norm - 1)**2)
+    #### END CODE HERE ####
+    return penalty
 
 
 
