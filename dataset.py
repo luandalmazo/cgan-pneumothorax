@@ -3,6 +3,7 @@ from torch.utils.data import Dataset, DataLoader
 import os
 import pydicom
 from torchvision import transforms
+import pandas as pd
 
 
 augment_transform = transforms.Compose([
@@ -28,7 +29,7 @@ small_transform = transforms.Compose([
 ])
 
 
-class PneumoDataset(Dataset):
+class SmallPneumoDataset(Dataset):
     def __init__(self, transform=default_transform):
         self.transform = transform
         self.dir_no_pneumothorax= "./siim_small/train/No Pneumothorax/"
@@ -44,6 +45,7 @@ class PneumoDataset(Dataset):
 
     def __len__(self):
         return len(self.dataset)
+    
     def __getitem__(self, index):
         
         label, dicom_file = self.dataset[index]
@@ -53,3 +55,31 @@ class PneumoDataset(Dataset):
         return image_pixel_data, float(label)
 
 
+class PneumoDataset(Dataset):
+    def __init__(self, transform=default_transform, train=True):
+        self.transform = transform
+
+        
+        self.dir = "./dataset_full/dicom-images-train" if train else "./dataset_full/dicom-images-test"
+
+        self.list_dir = sorted(os.listdir(self.dir))
+            
+        self.dataset = pd.read_csv('./dataset_full/train-rle.csv', delimiter="," )
+
+    def __len__(self):
+        return len(self.dataset)
+    
+    def __getitem__(self, index):
+
+        dicom_file, label = self.dataset[index]
+        image = pydicom.dcmread(dicom_file)
+        image_pixel_data = image.pixel_array
+        image_pixel_data = self.transform(image_pixel_data)
+
+        label = 0 if label == '-1' else 1
+        
+        return image_pixel_data, float(label)
+        
+
+
+        

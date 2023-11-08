@@ -296,7 +296,7 @@ class DCGenerator(nn.Module):
         return self.main(input)
 
 
-Generator = StyleGenerator
+Generator = DCGenerator
 
 if __name__ == "__main__":
     gen = Generator().to("cuda:0")
