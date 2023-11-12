@@ -94,7 +94,7 @@ class PneumoDataset(Dataset):
         image_pixel_data = image.pixel_array
         image_pixel_data = self.transform(image_pixel_data)
 
-        label = 0 if rle == '-1' else 1
+        label = 0 if (rle.lstrip() == "-1") else 1
         
         if not self.should_segment:
             return image_pixel_data, float(label)

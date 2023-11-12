@@ -25,7 +25,7 @@ parser.add_argument('--epochs', default=10, type=int)
 parser.add_argument('--glr', default=3e-5, type=float)
 parser.add_argument('--dlr', default=3e-5, type=float)
 # parser.add_argument('--batch_size', default=16, type=int)
-parser.add_argument('--batch_size', default=64, type=int)
+parser.add_argument('--batch_size', default=16, type=int)
 parser.add_argument('--checkpoint', default="", type=str)
 # parser.add_argument('--wgan_coeff', default=10.0, type=float
 parser.add_argument('--ppl', default=1, type=float)
@@ -39,14 +39,14 @@ checkpoint = args.checkpoint
 ppl_coeff = args.ppl
 
 # dataset = PneumoDataset(transform=small_transform)  #64x64
-dataset = PneumoDataset(transform=default_transform)  #256x256
+dataset = PneumoDataset(transform=default_transform, segment=True)  #256x256
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 if not checkpoint:
-    gen = Generator(num_classes=2)
-    disc = Discriminator(num_classes=2)
+    gen = Generator()
+    disc = Discriminator()
 else:
     gen = torch.load(f"gen-{checkpoint}.pkl", map_location=device)
     disc = torch.load(f"disc-{checkpoint}.pkl", map_location=device)
@@ -83,12 +83,14 @@ for epoch in range(epochs):
         real, mask = pair
         image_count += len(real)
 
+        mask = mask.float().to(device)
         real = real.to(device)
-        mask = mask.long().to(device)
-        gen_fake = gen(mask)
-        
         # print(real.shape)
         # print(mask.shape)
+        # print("mask")
+        # print(mask)
+        # print("endmask")
+        gen_fake = gen(mask)
         # print(gen_fake.shape)
 
         assert not torch.isnan(mask).any()
@@ -145,7 +147,7 @@ for epoch in range(epochs):
     print("gen ppl loss:", mean_ppl_loss / image_count, f"coeff:{ppl_coeff}")
     sys.stdout.flush()
 
-    if ((epoch % 50) == 0) and (epoch != 0):
+    if ((epoch % 30) == 0) and (epoch != 0):
         time = str(datetime.now())
         torch.save(gen, f"models/gen-{time}-epoch{epoch}.pkl")
 

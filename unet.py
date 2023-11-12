@@ -17,10 +17,11 @@ class Down(nn.Module):
     def __init__(self, input_channels, output_channels):
         super().__init__()
 
-        self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=2, bias=False, padding=1, padding_mode="reflect")
+        # self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=2, bias=False, padding=1, padding_mode="reflect")
+        self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=2, bias=True, padding=1, padding_mode="reflect")
         # self.norm = nn.InstanceNorm2d(output_channels)
-        self.norm = nn.Identity()
-        # self.norm = nn.BatchNorm2d(output_channels)
+        # self.norm = nn.Identity()
+        self.norm = nn.BatchNorm2d(output_channels)
         self.activation = nn.ReLU(0.2)
         self.pipeline = nn.Sequential(self.conv, self.norm, self.activation)
 
@@ -34,13 +35,20 @@ class Conv7Stride1(nn.Module):
 
         self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=7, stride=1, padding=padding, padding_mode="reflect")
         # self.norm = nn.InstanceNorm2d(output_channels)
-        self.norm = nn.Identity()
-        # self.norm = nn.BatchNorm2d(output_channels)
+        # self.norm = nn.Identity()
+        self.norm = nn.BatchNorm2d(output_channels)
         self.activation = activation
+
+        assert isinstance(self.activation, nn.Module)
+
         self.pipeline = nn.Sequential(self.conv, self.norm, self.activation)
 
     def forward(self, x):
         return self.pipeline(x)
+        # x = self.conv(x)
+        # x = self.norm(x)
+        # x = self.activation(x)
+        # return x
 
 class Residual(nn.Module):
     """rk"""
@@ -69,10 +77,11 @@ class Up(nn.Module):
         super().__init__()
 
         self.upsample = nn.Upsample(scale_factor=2, mode="nearest")
-        self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=1, bias=False, padding=1, padding_mode="reflect")
+        # self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=1, bias=False, padding=1, padding_mode="reflect")
+        self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=1, bias=True, padding=1, padding_mode="reflect")
         # self.norm = nn.InstanceNorm2d(output_channels)
-        self.norm = nn.Identity()
-        # self.norm = nn.BatchNorm2d(output_channels)
+        # self.norm = nn.Identity()
+        self.norm = nn.BatchNorm2d(output_channels)
         self.activation = nn.ReLU(0.2)
         self.pipeline = nn.Sequential(self.upsample, self.conv, self.norm, self.activation)
 
@@ -215,7 +224,7 @@ Discriminator = PatchDiscriminator
 
 if __name__ == "__main__":
     gen = Generator()
-    inp = torch.zeros(2, 3, 256, 256)
+    inp = torch.zeros(2, 1, 256, 256)
     print(inp.shape)
 
     out = gen(inp)
