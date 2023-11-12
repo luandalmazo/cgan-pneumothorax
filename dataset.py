@@ -1,10 +1,14 @@
 
 from torch.utils.data import Dataset, DataLoader
+import torch
 import os
 import pydicom
 from torchvision import transforms
 import pandas as pd
 import glob
+from segmentation_utils import rle2mask
+import numpy as np
+from utils import show_tensor_grayscale
 
 
 augment_transform = transforms.Compose([
@@ -57,9 +61,9 @@ class SmallPneumoDataset(Dataset):
 
 
 class PneumoDataset(Dataset):
-    def __init__(self, transform=default_transform, train=True):
+    def __init__(self, transform=default_transform, train=True, segment=False):
         self.transform = transform
-
+        self.should_segment = segment
         
         self.dir = "./dataset_full/dicom-images-train/*/*/*.dcm" if train else "./dataset_full/dicom-images-test/*/*/*.dcm"
         # self.dir = "./dataset_full/dicom-images-train/" if train else "./dataset_full/dicom-images-test/"
@@ -77,7 +81,7 @@ class PneumoDataset(Dataset):
         dicom_basename = self.dataset.iloc[index][0]
         # print(dicom_basename)
 
-        label = self.dataset.iloc[index][1]
+        rle = self.dataset.iloc[index][1]
 
         matching_files = [file for file in self.list_dir if dicom_basename in file]
 
@@ -86,24 +90,34 @@ class PneumoDataset(Dataset):
         except IndexError:
             raise Exception("BRUH MOMENTO DATASET IS BUILT DIFFERENT")
 
-        # dicom_file = self.list_dir[index]
-        # dicom_basename = os.path.basename(dicom_file)
-        # dicom_basename = os.path.splitext(dicom_basename)[0]
-        # # search for dicom basename
-        # query = self.dataset[self.dataset["ImageId"] == dicom_basename] 
-        # # return type is a one-row dataframe. PixelEncondings is column index 1.
-        # label = query.iloc[0][1].strip()
-
         image = pydicom.dcmread(dicom_file)
         image_pixel_data = image.pixel_array
         image_pixel_data = self.transform(image_pixel_data)
 
-        label = 0 if label == '-1' else 1
+        label = 0 if rle == '-1' else 1
         
-        return image_pixel_data, float(label)
+        if not self.should_segment:
+            return image_pixel_data, float(label)
         
+        # should get segmentation mask
+        if not label:
+            mask = np.zeros((1024, 1024, 1))
+        else:
+            mask = np.expand_dims(rle2mask(rle, 1024, 1024).T, axis=2)
+        
+        mask = self.transform(mask)
+        
+        return image_pixel_data, mask
+
+
+
 if __name__ == '__main__':
-    dataset = PneumoDataset()
-    print(dataset.__getitem__(4))
+    dataset = PneumoDataset(segment=True)
+    a, b = dataset.__getitem__(100)
+    print(b.shape)
+    print(a.shape)
+    # print(len(dataset))
     # print(dataset.list_dir)
-        
+    images = torch.concatenate((a, b), dim=1)
+    show_tensor_grayscale(images, show="save", name="Hilutho")
+    

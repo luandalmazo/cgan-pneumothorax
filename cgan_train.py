@@ -7,7 +7,7 @@ import torchvision
 import torch
 import argparse
 
-from dataset import PneumoDataset, augment_transform, small_transform
+from dataset import PneumoDataset, augment_transform, small_transform, default_transform
 from discriminator import Discriminator, get_gradient_penalty
 from generator import Generator
 
@@ -33,7 +33,8 @@ batch_size = args.batch_size
 checkpoint = args.checkpoint
 wgan_coeff = args.wgan_coeff
 
-dataset = PneumoDataset(transform=small_transform)  
+# dataset = PneumoDataset(transform=small_transform)  #64x64
+dataset = PneumoDataset(transform=default_transform)  #256x256
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -51,8 +52,8 @@ gen.apply(weights_init)
 disc.apply(weights_init)
 
 
-# gen = nn.DataParallel(gen)
-# disc = nn.DataParallel(disc)
+gen = nn.DataParallel(gen)
+disc = nn.DataParallel(disc)
 gen.to(device)
 disc.to(device)
 

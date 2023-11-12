@@ -241,19 +241,23 @@ def get_noise(n_samples, input_dim, device='cpu'):
 #         return x
 
 class DCGenerator(nn.Module):
-    def __init__(self, nz=100, ngf=128, nc=1, num_classes=2):
+    def __init__(self, nz=100, ngf=128, nc=1, num_classes=2, noise_size=8):
         super().__init__()
         self.num_classes = 2
         self.nz = nz
         self.ngf = ngf
         self.nc=nc
+        self.noise_size=noise_size
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.main = nn.Sequential(
             # input is Z, going into a convolution
-            nn.ConvTranspose2d( nz, ngf * 8, 4, 1, 0, bias=False),
+            # nn.ConvTranspose2d( nz, ngf * 8, 4, 1, 0, bias=False),
+            nn.Upsample(scale_factor=2, mode='nearest'),  # Upsample
+            nn.Conv2d(nz, ngf * 8, stride=1, kernel_size=3,padding=1, bias=False),
             nn.BatchNorm2d(ngf * 8),
             nn.ReLU(True),
+
             # state size. ``(ngf*8) x 4 x 4``
             # nn.ConvTranspose2d(ngf * 8, ngf * 4, 4, 2, 1, bias=False),
             nn.Upsample(scale_factor=2, mode='nearest'),  # Upsample
@@ -284,9 +288,11 @@ class DCGenerator(nn.Module):
     def get_input(self, labels):
         batch_size = len(labels)
         onehot = torch.nn.functional.one_hot(labels, self.num_classes).unsqueeze(2).unsqueeze(3)
+        # # transform onehot vectors into onehot matrices
         # onehot = onehot[:, :, None, None] # no idea what this does, but it works
-        # images_onehot = onehot.repeat(1, 1, self.noise_size, self.noise_size) # transform onehot vectors into onehot matrices
-        noise = torch.randn(batch_size, self.nz-self.num_classes, 1, 1).to(self.device)
+        onehot = onehot.repeat(1, 1, self.noise_size, self.noise_size) 
+        # noise = torch.randn(batch_size, self.nz-self.num_classes, 1, 1).to(self.device) #64x64
+        noise = torch.randn(batch_size, self.nz-self.num_classes, self.noise_size, self.noise_size).to(self.device) # 256x256
 
         inp = torch.concatenate((noise, onehot), dim=1)
         return inp
