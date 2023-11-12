@@ -104,7 +104,7 @@ class UnetGenerator(nn.Module):
         super().__init__()
         self.num_residuals = num_residuals
 
-        self.c7init = Conv7Stride1(num_channels, 64, activation=nn.ReLU(0.2)) # RGB -> 64.
+        self.c7init = Conv7Stride1(num_channels + 1, 64, activation=nn.ReLU(0.2)) # RGB -> 64.
         self.down1 = Down(64, 128)
         self.down2 = Down(128, 256)
         self.residuals = nn.Sequential(
@@ -117,7 +117,11 @@ class UnetGenerator(nn.Module):
         # self.c7end = Conv7Stride1(64*2, num_channels, activation=nn.Sigmoid()) # 64 -> RGB
         self.c7end = Conv7Stride1(64*2, num_channels, activation=nn.Tanh()) # 64 -> RGB
 
-    def forward(self, x):
+    def forward(self, image):
+        noise_channel = torch.randn_like(x)
+
+        x = torch.concatenate((image, noise_channel), dim=1)
+
         # 3x256x256
         init = self.c7init(x) # 64x256x256
         d1 = self.down1(init) # 128x128x128 

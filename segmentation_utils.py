@@ -27,8 +27,14 @@ def mask2rle(img, width, height):
 
     return " ".join(rle)
 
-def rle2mask(rle, width, height):
+def rle2mask(rle, width, height, init_mask=None):
+    # if not init_mask:
+    #     mask= np.zeros(width* height)
+    # else:
+    #     mask = init_mask
+    
     mask= np.zeros(width* height)
+
     array = np.asarray([int(x) for x in rle.split()])
     starts = array[0::2]
     lengths = array[1::2]
