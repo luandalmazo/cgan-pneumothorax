@@ -91,11 +91,11 @@ class UnetGenerator(nn.Module):
     R256,R256,R256,R256,R256,R256,u128
     u64,c7s1-3
     """
-    def __init__(self, num_residuals=6):
+    def __init__(self, num_residuals=6, num_channels=1):
         super().__init__()
         self.num_residuals = num_residuals
 
-        self.c7init = Conv7Stride1(3, 64, activation=nn.ReLU(0.2)) # RGB -> 64.
+        self.c7init = Conv7Stride1(num_channels, 64, activation=nn.ReLU(0.2)) # RGB -> 64.
         self.down1 = Down(64, 128)
         self.down2 = Down(128, 256)
         self.residuals = nn.Sequential(
@@ -105,8 +105,8 @@ class UnetGenerator(nn.Module):
         # remember skip connections
         self.up1 = Up(256*2, 128)
         self.up2 = Up(128*2, 64)
-        self.c7end = Conv7Stride1(64*2, 3, activation=nn.Sigmoid()) # 64 -> RGB
-        # self.c7end = Conv7Stride1(64*2, 3, activation=nn.Tanh()) # 64 -> RGB
+        # self.c7end = Conv7Stride1(64*2, num_channels, activation=nn.Sigmoid()) # 64 -> RGB
+        self.c7end = Conv7Stride1(64*2, num_channels, activation=nn.Tanh()) # 64 -> RGB
 
     def forward(self, x):
         # 3x256x256
@@ -168,12 +168,12 @@ class PatchDiscriminator(nn.Module):
     The discriminator architecture is:
     C64-C128-C256-C512
     """
-    def __init__(self, num_classes):
+    def __init__(self, num_channels=1):
         super().__init__()
-        self.num_classes = num_classes
+        self.num_channels = num_channels
 
         # self.c1 = Conv4(1 + self.num_classes, 16)
-        self.c1 = Conv4(1 + self.num_classes, 32)
+        self.c1 = Conv4(num_channels * 2, 32)
         # self.c2 = Conv4(16, 32)
         # self.c3 = Conv4(32, 64)
         self.c2 = Conv4(32, 64)
