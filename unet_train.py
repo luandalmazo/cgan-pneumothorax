@@ -6,6 +6,7 @@ import torch.nn as nn
 import torchvision
 import torch
 import argparse
+import matplotlib.pyplot as plt
 
 from dataset import PneumoDataset, augment_transform, small_transform, default_transform
 # from discriminator import Discriminator, get_gradient_penalty
@@ -25,10 +26,10 @@ parser.add_argument('--epochs', default=10, type=int)
 parser.add_argument('--glr', default=2e-4, type=float)
 parser.add_argument('--dlr', default=2e-4, type=float)
 # parser.add_argument('--batch_size', default=16, type=int)
-parser.add_argument('--batch_size', default=16, type=int)
+parser.add_argument('--batch_size', default=1, type=int)
 parser.add_argument('--checkpoint', default="", type=str)
 # parser.add_argument('--wgan_coeff', default=10.0, type=float
-parser.add_argument('--ppl', default=1, type=float)
+parser.add_argument('--ppl', default=10, type=float)
 # )
 args = parser.parse_args()
 
@@ -68,6 +69,10 @@ adv_criterion = nn.BCEWithLogitsLoss()
 ppl_criterion = nn.L1Loss()
 
 
+all_adv_losses = []
+all_ppl_losses = []
+all_d_losses = []
+
 for epoch in range(epochs):
     gen.train()
     disc.train()
@@ -84,6 +89,8 @@ for epoch in range(epochs):
         image_count += len(real)
 
         mask = mask.float().to(device)
+        mask = 1 - mask # lets see if this helps?
+
         real = real.to(device)
         # print(real.shape)
         # print(mask.shape)
@@ -141,7 +148,6 @@ for epoch in range(epochs):
         to_show = torch.concatenate((fake.detach()[:10], real[:10]), dim=0)
         show_tensor_grayscale(to_show, show="save", name=f"samples/{epoch}", nrow=5)
 
-
     print("disc loss:", mean_disc_loss / image_count)
     print("gen adv loss:", mean_adv_loss / image_count)
     print("gen ppl loss:", mean_ppl_loss / image_count, f"coeff:{ppl_coeff}")
@@ -150,6 +156,24 @@ for epoch in range(epochs):
     if ((epoch % 30) == 0) and (epoch != 0):
         time = str(datetime.now())
         torch.save(gen, f"models/gen-{time}-epoch{epoch}.pkl")
+
+    # Plot stuff
+    all_d_losses.append(mean_disc_loss / image_count)
+    all_adv_losses.append(mean_adv_loss / image_count)
+    all_ppl_losses.append(mean_ppl_loss / image_count)
+
+    epoch_list = list(range(epoch))
+    fig = plt.figure()        
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('GAN losses')
+    plt.plot(epoch_list, all_d_losses, color='b', label='discrim')
+    plt.plot(epoch_list, all_adv_losses, color='g', label='advers')
+    plt.plot(epoch_list, all_ppl_losses, color='r', label='percep')
+
+    plt.legend(loc="upper left")
+    # plt.locator_params(axis='x', nbins=num_epochs//3)
+    fig.savefig("samples/plot.png", format='png')
 
 
 time = str(datetime.now())

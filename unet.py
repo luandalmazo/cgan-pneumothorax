@@ -20,8 +20,8 @@ class Down(nn.Module):
         # self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=2, bias=False, padding=1, padding_mode="reflect")
         self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=2, bias=True, padding=1, padding_mode="reflect")
         # self.norm = nn.InstanceNorm2d(output_channels)
-        # self.norm = nn.Identity()
-        self.norm = nn.BatchNorm2d(output_channels)
+        self.norm = nn.Identity()
+        # self.norm = nn.BatchNorm2d(output_channels)
         self.activation = nn.ReLU(0.2)
         self.pipeline = nn.Sequential(self.conv, self.norm, self.activation)
 
@@ -35,8 +35,8 @@ class Conv7Stride1(nn.Module):
 
         self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=7, stride=1, padding=padding, padding_mode="reflect")
         # self.norm = nn.InstanceNorm2d(output_channels)
-        # self.norm = nn.Identity()
-        self.norm = nn.BatchNorm2d(output_channels)
+        self.norm = nn.Identity()
+        # self.norm = nn.BatchNorm2d(output_channels)
         self.activation = activation
 
         assert isinstance(self.activation, nn.Module)
@@ -80,8 +80,8 @@ class Up(nn.Module):
         # self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=1, bias=False, padding=1, padding_mode="reflect")
         self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=1, bias=True, padding=1, padding_mode="reflect")
         # self.norm = nn.InstanceNorm2d(output_channels)
-        # self.norm = nn.Identity()
-        self.norm = nn.BatchNorm2d(output_channels)
+        self.norm = nn.Identity()
+        # self.norm = nn.BatchNorm2d(output_channels)
         self.activation = nn.ReLU(0.2)
         self.pipeline = nn.Sequential(self.upsample, self.conv, self.norm, self.activation)
 
@@ -118,7 +118,7 @@ class UnetGenerator(nn.Module):
         self.c7end = Conv7Stride1(64*2, num_channels, activation=nn.Tanh()) # 64 -> RGB
 
     def forward(self, image):
-        noise_channel = torch.randn_like(x)
+        noise_channel = torch.randn_like(image)
 
         x = torch.concatenate((image, noise_channel), dim=1)
 
@@ -152,8 +152,8 @@ class Conv4(nn.Module):
         super().__init__()
 
         self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=kernel_size, stride=2, padding=1, padding_mode="reflect")
-        # self.norm = nn.InstanceNorm2d(output_channels)
-        self.norm = nn.BatchNorm2d(output_channels)
+        self.norm = nn.InstanceNorm2d(output_channels)
+        # self.norm = nn.BatchNorm2d(output_channels)
         self.should_norm = should_norm
 
         
@@ -186,13 +186,13 @@ class PatchDiscriminator(nn.Module):
         self.num_channels = num_channels
 
         # self.c1 = Conv4(1 + self.num_classes, 16)
-        self.c1 = Conv4(num_channels * 2, 32)
+        self.c1 = Conv4(num_channels * 2, 64)
         # self.c2 = Conv4(16, 32)
         # self.c3 = Conv4(32, 64)
-        self.c2 = Conv4(32, 64)
+        self.c2 = Conv4(64, 128)
         # self.c4 = Conv4(64, 128)
-        self.c3 = Conv4(64, 128)
-        self.c4 = Conv4(128, 256)
+        self.c3 = Conv4(128, 256)
+        self.c4 = Conv4(256, 215)
         # self.c6 = Conv4(256, 512)
         # self.c7 = Conv4(512, 512)
 
