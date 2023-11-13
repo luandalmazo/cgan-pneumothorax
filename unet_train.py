@@ -58,8 +58,8 @@ gen.apply(weights_init)
 disc.apply(weights_init)
 
 
-gen = nn.DataParallel(gen)
-disc = nn.DataParallel(disc)
+# gen = nn.DataParallel(gen)
+# disc = nn.DataParallel(disc)
 gen.to(device)
 disc.to(device)
 

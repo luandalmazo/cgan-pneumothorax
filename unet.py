@@ -192,12 +192,12 @@ class PatchDiscriminator(nn.Module):
         self.c2 = Conv4(64, 128)
         # self.c4 = Conv4(64, 128)
         self.c3 = Conv4(128, 256)
-        self.c4 = Conv4(256, 215)
+        self.c4 = Conv4(256, 512)
         # self.c6 = Conv4(256, 512)
         # self.c7 = Conv4(512, 512)
 
         # self.last_conv = nn.Conv2d(512, 1, kernel_size=4, stride=1, padding=1, padding_mode="reflect")
-        self.last_conv = nn.Conv2d(256, 1, kernel_size=4, stride=1)
+        self.last_conv = nn.Conv2d(512, 1, kernel_size=4, stride=1)
         # self.linear = nn.Linear()
         # self.nonlinear = nn.Sigmoid()
         # self.pipeline = nn.Sequential(self.c1, self.c2,self.c3, self.c4, self.c5, self.c6, self.c7, self.last_conv)
@@ -227,6 +227,7 @@ Discriminator = PatchDiscriminator
 
 
 if __name__ == "__main__":
+    print("GEN")
     gen = Generator()
     inp = torch.zeros(2, 1, 256, 256)
     print(inp.shape)
