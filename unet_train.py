@@ -156,24 +156,29 @@ for epoch in range(epochs):
     if ((epoch % 30) == 0) and (epoch != 0):
         time = str(datetime.now())
         torch.save(gen, f"models/gen-{time}-epoch{epoch}.pkl")
+        torch.save(disc, f"models/disc-{time}-epoch{epoch}.pkl")
+
 
     # Plot stuff
-    all_d_losses.append(mean_disc_loss / image_count)
-    all_adv_losses.append(mean_adv_loss / image_count)
-    all_ppl_losses.append(mean_ppl_loss / image_count)
+    try:
+        all_d_losses.append(mean_disc_loss / image_count)
+        all_adv_losses.append(mean_adv_loss / image_count)
+        all_ppl_losses.append(mean_ppl_loss / image_count)
 
-    epoch_list = list(range(epoch+1))
-    fig = plt.figure()        
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.title('GAN losses')
-    plt.plot(epoch_list, all_d_losses, color='b', label='discrim')
-    plt.plot(epoch_list, all_adv_losses, color='g', label='advers')
-    plt.plot(epoch_list, all_ppl_losses, color='r', label='percep')
+        epoch_list = list(range(epoch+1))
+        plt.clf()
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.title('GAN losses')
+        plt.plot(epoch_list, all_d_losses, color='b', label='discrim')
+        plt.plot(epoch_list, all_adv_losses, color='g', label='advers')
+        plt.plot(epoch_list, all_ppl_losses, color='r', label='percep')
 
-    plt.legend(loc="upper left")
-    # plt.locator_params(axis='x', nbins=num_epochs//3)
-    fig.savefig("samples/plot.png", format='png')
+        plt.legend(loc="upper left")
+        # plt.locator_params(axis='x', nbins=num_epochs//3)
+        plt.savefig("samples/plot.png", format='png')
+    except Exception as e:
+        print(f"Error when plotting losses,", e)
 
 
 time = str(datetime.now())

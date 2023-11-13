@@ -32,6 +32,7 @@ def show_tensor_grayscale(image_tensor, num_images=250, size=(1, 28, 28), nrow=5
     # Ensure the image tensor has the expected shape for grayscale images
     # if image_tensor.dim() == 3:  # If there's no channel dimension
     #     image_tensor = image_tensor.unsqueeze(1)
+    plt.clf()
 
     # image_tensor = (image_tensor + 1) / 2
     image_unflat = image_tensor.detach().cpu()
