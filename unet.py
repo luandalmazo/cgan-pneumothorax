@@ -20,8 +20,8 @@ class Down(nn.Module):
         # self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=2, bias=False, padding=1, padding_mode="reflect")
         self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=2, bias=True, padding=1, padding_mode="reflect")
         # self.norm = nn.InstanceNorm2d(output_channels)
-        self.norm = nn.Identity()
-        # self.norm = nn.BatchNorm2d(output_channels)
+        # self.norm = nn.Identity()
+        self.norm = nn.BatchNorm2d(output_channels)
         self.activation = nn.ReLU(0.2)
         self.pipeline = nn.Sequential(self.conv, self.norm, self.activation)
 
@@ -80,8 +80,8 @@ class Up(nn.Module):
         # self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=1, bias=False, padding=1, padding_mode="reflect")
         self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=3, stride=1, bias=True, padding=1, padding_mode="reflect")
         # self.norm = nn.InstanceNorm2d(output_channels)
-        self.norm = nn.Identity()
-        # self.norm = nn.BatchNorm2d(output_channels)
+        # self.norm = nn.Identity()
+        self.norm = nn.BatchNorm2d(output_channels)
         self.activation = nn.ReLU(0.2)
         self.pipeline = nn.Sequential(self.upsample, self.conv, self.norm, self.activation)
 

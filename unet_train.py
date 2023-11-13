@@ -26,7 +26,7 @@ parser.add_argument('--epochs', default=10, type=int)
 parser.add_argument('--glr', default=2e-4, type=float)
 parser.add_argument('--dlr', default=2e-4, type=float)
 # parser.add_argument('--batch_size', default=16, type=int)
-parser.add_argument('--batch_size', default=1, type=int)
+parser.add_argument('--batch_size', default=16, type=int)
 parser.add_argument('--checkpoint', default="", type=str)
 # parser.add_argument('--wgan_coeff', default=10.0, type=float
 parser.add_argument('--ppl', default=10, type=float)
@@ -145,7 +145,7 @@ for epoch in range(epochs):
 
     # if (epoch % 10) == 0:
     if True:
-        to_show = torch.concatenate((fake.detach()[:10], real[:10]), dim=0)
+        to_show = torch.concatenate((fake.detach()[:10], real[:10], mask[:10]), dim=0)
         show_tensor_grayscale(to_show, show="save", name=f"samples/{epoch}", nrow=5)
 
     print("disc loss:", mean_disc_loss / image_count)
