@@ -162,7 +162,7 @@ for epoch in range(epochs):
     all_adv_losses.append(mean_adv_loss / image_count)
     all_ppl_losses.append(mean_ppl_loss / image_count)
 
-    epoch_list = list(range(epoch))
+    epoch_list = list(range(epoch+1))
     fig = plt.figure()        
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
